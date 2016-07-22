@@ -151,7 +151,7 @@ Capybara.add_selector(:field) do
   filter_set(:_field)
 
   filter(:readonly, boolean: true) { |node, value| not(value ^ node.readonly?) }
-  filter(:with) { |node, with| node.value == with.to_s }
+  filter(:with) { |node, with| if with.is_a?(Regexp) ? node.value =~ with : node.value == with.to_s }
   filter(:type) do |node, type|
     if ['textarea', 'select'].include?(type)
       node.tag_name == type
