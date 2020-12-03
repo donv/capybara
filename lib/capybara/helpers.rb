@@ -1,14 +1,12 @@
-# encoding: UTF-8
 # frozen_string_literal: true
 
 module Capybara
-
   # @api private
   module Helpers
-    extend self
+  module_function
 
     ##
-    #
+    # @deprecated
     # Normalizes whitespace space by stripping leading and trailing
     # whitespace and replacing sequences of whitespace characters
     # with a single space.
@@ -17,6 +15,7 @@ module Capybara
     # @return [String]         Normalized text
     #
     def normalize_whitespace(text)
+      Capybara::Helpers.warn 'DEPRECATED: Capybara::Helpers::normalize_whitespace is deprecated, please update your driver'
       text.to_s.gsub(/[[:space:]]+/, ' ').strip
     end
 
@@ -26,88 +25,35 @@ module Capybara
     # if text is not a regexp
     #
     # @param [String] text Text to escape
-    # @return [String]     Escaped text
+    # @param [Boolean] exact (false) Whether or not this should be an exact text match
+    # @param [Fixnum, Boolean, nil] options Options passed to Regexp.new when creating the Regexp
+    # @return [Regexp] Regexp to match the passed in text and options
     #
-    def to_regexp(text, options=nil)
-      text.is_a?(Regexp) ? text : Regexp.new(Regexp.escape(normalize_whitespace(text)), options)
+    def to_regexp(text, exact: false, all_whitespace: false, options: nil)
+      return text if text.is_a?(Regexp)
+
+      escaped = Regexp.escape(text)
+      escaped = escaped.gsub('\\ ', '[[:blank:]]') if all_whitespace
+      escaped = "\\A#{escaped}\\z" if exact
+      Regexp.new(escaped, options)
     end
 
     ##
     #
     # Injects a `<base>` tag into the given HTML code, pointing to
-    # `Capybara.asset_host`.
+    # {Capybara.configure asset_host}.
     #
     # @param [String] html     HTML code to inject into
+    # @param [URL] host (Capybara.asset_host) The host from which assets should be loaded
     # @return [String]         The modified HTML code
     #
-    def inject_asset_host(html)
-      if Capybara.asset_host && Nokogiri::HTML(html).css("base").empty?
-        match = html.match(/<head[^<]*?>/)
-        if match
-          return html.clone.insert match.end(0), "<base href='#{Capybara.asset_host}' />"
+    def inject_asset_host(html, host: Capybara.asset_host)
+      if host && Nokogiri::HTML(html).css('base').empty?
+        html.match(/<head[^<]*?>/) do |m|
+          return html.clone.insert m.end(0), "<base href='#{host}' />"
         end
       end
-
       html
-    end
-
-    ##
-    #
-    # Checks if the given count matches the given count options.
-    # Defaults to true if no options are specified. If multiple
-    # options are provided, it tests that all conditions are met;
-    # however, if :count is supplied, all other options are ignored.
-    #
-    # @param [Integer] count     The actual number. Should be coercible via Integer()
-    # @option [Range] between    Count must be within the given range
-    # @option [Integer] count    Count must be exactly this
-    # @option [Integer] maximum  Count must be smaller than or equal to this value
-    # @option [Integer] minimum  Count must be larger than or equal to this value
-    #
-    def matches_count?(count, options={})
-      return (Integer(options[:count]) == count)     if options[:count]
-      return false if options[:maximum] && (Integer(options[:maximum]) < count)
-      return false if options[:minimum] && (Integer(options[:minimum]) > count)
-      return false if options[:between] && !(options[:between] === count)
-      return true
-    end
-
-    ##
-    #
-    # Checks if a count of 0 is valid for the given options hash.
-    # Returns false if options hash does not specify any count options.
-    #
-    def expects_none?(options={})
-      if [:count, :maximum, :minimum, :between].any? { |k| options.has_key? k }
-        matches_count?(0,options)
-      else
-        false
-      end
-    end
-
-    ##
-    #
-    # Generates a failure message given a description of the query and count
-    # options.
-    #
-    # @param [String] description   Description of a query
-    # @option [Range] between       Count should have been within the given range
-    # @option [Integer] count       Count should have been exactly this
-    # @option [Integer] maximum     Count should have been smaller than or equal to this value
-    # @option [Integer] minimum     Count should have been larger than or equal to this value
-    #
-    def failure_message(description, options={})
-      message = String.new("expected to find #{description}")
-      if options[:count]
-        message << " #{options[:count]} #{declension('time', 'times', options[:count])}"
-      elsif options[:between]
-        message << " between #{options[:between].first} and #{options[:between].last} times"
-      elsif options[:maximum]
-        message << " at most #{options[:maximum]} #{declension('time', 'times', options[:maximum])}"
-      elsif options[:minimum]
-        message << " at least #{options[:minimum]} #{declension('time', 'times', options[:minimum])}"
-      end
-      message
     end
 
     ##
@@ -121,20 +67,65 @@ module Capybara
     # @param [Integer] count       The number of items
     #
     def declension(singular, plural, count)
-      if count == 1
-        singular
+      count == 1 ? singular : plural
+    end
+
+    def filter_backtrace(trace)
+      return 'No backtrace' unless trace
+
+      filter = %r{lib/capybara/|lib/rspec/|lib/minitest/}
+      new_trace = trace.take_while { |line| line !~ filter }
+      new_trace = trace.reject { |line| line =~ filter } if new_trace.empty?
+      new_trace = trace.dup if new_trace.empty?
+
+      new_trace.first.split(/:in /, 2).first
+    end
+
+    def warn(message, uplevel: 1)
+      return Kernel.warn(message, uplevel: uplevel) if RUBY_VERSION >= '2.6'
+
+      # TODO: Remove when we drop support for Ruby 2.5
+      # Workaround for emulating `warn '...', uplevel: n` in Ruby 2.5 or lower.
+      if (match = /^(?<file>.+?):(?<line>\d+)(?::in `.*')?/.match(caller[uplevel]))
+        location = [match[:file], match[:line]].join(':')
+        Kernel.warn "#{location}: #{message}"
       else
-        plural
+        Kernel.warn message
       end
     end
 
     if defined?(Process::CLOCK_MONOTONIC)
-      def monotonic_time
-        Process.clock_gettime Process::CLOCK_MONOTONIC
-      end
+      def monotonic_time; Process.clock_gettime Process::CLOCK_MONOTONIC; end
     else
-      def monotonic_time
-        Time.now.to_f
+      def monotonic_time; Time.now.to_f; end
+    end
+
+    def timer(expire_in:)
+      Timer.new(expire_in)
+    end
+
+    class Timer
+      def initialize(expire_in)
+        @start = current
+        @expire_in = expire_in
+      end
+
+      def expired?
+        if stalled?
+          raise Capybara::FrozenInTime, 'Time appears to be frozen. Capybara does not work with libraries which freeze time, consider using time travelling instead'
+        end
+
+        current - @start >= @expire_in
+      end
+
+      def stalled?
+        @start == current
+      end
+
+    private
+
+      def current
+        Capybara::Helpers.monotonic_time
       end
     end
   end

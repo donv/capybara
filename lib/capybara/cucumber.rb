@@ -1,6 +1,8 @@
 # frozen_string_literal: true
+
 require 'capybara/dsl'
 require 'capybara/rspec/matchers'
+require 'capybara/rspec/matcher_proxies'
 
 World(Capybara::DSL)
 World(Capybara::RSpecMatchers)
@@ -20,8 +22,6 @@ end
 Before do |scenario|
   scenario.source_tag_names.each do |tag|
     driver_name = tag.sub(/^@/, '').to_sym
-    if Capybara.drivers.has_key?(driver_name)
-      Capybara.current_driver = driver_name
-    end
+    Capybara.current_driver = driver_name if Capybara.drivers[driver_name]
   end
 end

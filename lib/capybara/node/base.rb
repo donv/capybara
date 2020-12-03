@@ -1,7 +1,7 @@
 # frozen_string_literal: true
+
 module Capybara
   module Node
-
     ##
     #
     # A {Capybara::Node::Base} represents either an element on a page through the subclass
@@ -17,9 +17,9 @@ module Capybara
     #
     #     session = Capybara::Session.new(:rack_test, my_app)
     #     session.visit('/')
-    #     session.fill_in('Foo', :with => 'Bar')    # from Capybara::Node::Actions
+    #     session.fill_in('Foo', with: 'Bar')    # from Capybara::Node::Actions
     #     bar = session.find('#bar')                # from Capybara::Node::Finders
-    #     bar.select('Baz', :from => 'Quox')        # from Capybara::Node::Actions
+    #     bar.select('Baz', from: 'Quox')        # from Capybara::Node::Actions
     #     session.has_css?('#foobar')               # from Capybara::Node::Matchers
     #
     class Base
@@ -67,60 +67,72 @@ module Capybara
       # time has passed. On rubies/platforms which don't support access to a monotonic process clock
       # if the return value of `Time.now` is stubbed out, Capybara will raise `Capybara::FrozenInTime`.
       #
-      # @param  [Integer] seconds         Number of seconds to retry this block
-      # @param options [Hash]
-      # @option options [Array<Exception>] :errors (driver.invalid_element_errors +
+      # @param  [Integer] seconds  (current sessions default_max_wait_time) Maximum number of seconds to retry this block
+      # @param  [Array<Exception>] errors (driver.invalid_element_errors +
       #   [Capybara::ElementNotFound]) exception types that cause the block to be rerun
       # @return [Object]                  The result of the given block
       # @raise  [Capybara::FrozenInTime]  If the return value of `Time.now` appears stuck
       #
-      def synchronize(seconds=Capybara.default_max_wait_time, options = {})
-        start_time = Capybara::Helpers.monotonic_time
+      def synchronize(seconds = nil, errors: nil)
+        return yield if session.synchronized
 
-        if session.synchronized
+        seconds = session_options.default_max_wait_time if [nil, true].include? seconds
+        session.synchronized = true
+        timer = Capybara::Helpers.timer(expire_in: seconds)
+        begin
           yield
-        else
-          session.synchronized = true
-          begin
-            yield
-          rescue => e
-            session.raise_server_error!
-            raise e unless driver.wait?
-            raise e unless catch_error?(e, options[:errors])
-            raise e if (Capybara::Helpers.monotonic_time - start_time) >= seconds
-            sleep(0.05)
-            raise Capybara::FrozenInTime, "time appears to be frozen, Capybara does not work with libraries which freeze time, consider using time travelling instead" if Capybara::Helpers.monotonic_time == start_time
-            reload if Capybara.automatic_reload
-            retry
-          ensure
-            session.synchronized = false
+        rescue StandardError => e
+          session.raise_server_error!
+          raise e unless catch_error?(e, errors)
+
+          if driver.wait?
+            raise e if timer.expired?
+
+            sleep(0.01)
+            reload if session_options.automatic_reload
+          else
+            old_base = @base
+            reload if session_options.automatic_reload
+            raise e if old_base == @base
           end
+          retry
+        ensure
+          session.synchronized = false
         end
       end
 
       # @api private
-      def find_css(css)
-        base.find_css(css)
+      def find_css(css, **options)
+        if base.method(:find_css).arity == 1
+          base.find_css(css)
+        else
+          base.find_css(css, **options)
+        end
       end
 
       # @api private
-      def find_xpath(xpath)
-        base.find_xpath(xpath)
+      def find_xpath(xpath, **options)
+        if base.method(:find_xpath).arity == 1
+          base.find_xpath(xpath)
+        else
+          base.find_xpath(xpath, **options)
+        end
       end
 
-      # @deprecated Use query_scope instead
-      def parent
-        warn "DEPRECATED: #parent is deprecated in favor of #query_scope - Note: #parent was not the elements parent in the document so it's most likely not what you wanted anyway"
-        query_scope
+      # @api private
+      def session_options
+        session.config
+      end
+
+      def to_capybara_node
+        self
       end
 
     protected
 
       def catch_error?(error, errors = nil)
         errors ||= (driver.invalid_element_errors + [Capybara::ElementNotFound])
-        errors.any? do |type|
-          error.is_a?(type)
-        end
+        errors.any? { |type| error.is_a?(type) }
       end
 
       def driver

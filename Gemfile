@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 source 'https://rubygems.org'
 
-gem 'bundler', '~> 1.1'
+gem 'bundler', '< 3.0'
 gemspec
 
-gem 'xpath', :git => 'git://github.com/jnicklas/xpath.git'
+gem 'xpath', github: 'teamcapybara/xpath'
 
 group :doc do
-  gem 'redcarpet', :platforms => :mri
+  gem 'redcarpet', platforms: :mri
 end

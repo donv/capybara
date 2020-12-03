@@ -1,20 +1,23 @@
 # frozen_string_literal: true
+
 require 'rack/test'
 require 'rack/utils'
-require 'mime/types'
+require 'mini_mime'
 require 'nokogiri'
 require 'cgi'
 
 class Capybara::RackTest::Driver < Capybara::Driver::Base
   DEFAULT_OPTIONS = {
-    :respect_data_method => false,
-    :follow_redirects => true,
-    :redirect_limit => 5
-  }
+    respect_data_method: false,
+    follow_redirects: true,
+    redirect_limit: 5
+  }.freeze
   attr_reader :app, :options
 
-  def initialize(app, options={})
-    raise ArgumentError, "rack-test requires a rack application, but none was given" unless app
+  def initialize(app, **options)
+    raise ArgumentError, 'rack-test requires a rack application, but none was given' unless app
+
+    super()
     @app = app
     @options = DEFAULT_OPTIONS.merge(options)
   end
@@ -39,15 +42,19 @@ class Capybara::RackTest::Driver < Capybara::Driver::Base
     browser.last_request
   end
 
-  def visit(path, attributes = {})
-    browser.visit(path, attributes)
+  def visit(path, **attributes)
+    browser.visit(path, **attributes)
+  end
+
+  def refresh
+    browser.refresh
   end
 
   def submit(method, path, attributes)
     browser.submit(method, path, attributes)
   end
 
-  def follow(method, path, attributes = {})
+  def follow(method, path, **attributes)
     browser.follow(method, path, attributes)
   end
 
@@ -68,7 +75,11 @@ class Capybara::RackTest::Driver < Capybara::Driver::Base
   end
 
   def find_css(selector)
-    browser.find(:css,selector)
+    browser.find(:css, selector)
+  rescue Nokogiri::CSS::SyntaxError
+    raise unless selector.include?(' i]')
+
+    raise ArgumentError, "This driver doesn't support case insensitive attribute matching when using CSS base selectors"
   end
 
   def html
@@ -87,14 +98,13 @@ class Capybara::RackTest::Driver < Capybara::Driver::Base
     @browser = nil
   end
 
-  # @deprecated This method is being removed
-  def browser_initialized?
-    super && !@browser.nil?
-  end
-
   def get(*args, &block); browser.get(*args, &block); end
   def post(*args, &block); browser.post(*args, &block); end
   def put(*args, &block); browser.put(*args, &block); end
   def delete(*args, &block); browser.delete(*args, &block); end
   def header(key, value); browser.header(key, value); end
+
+  def invalid_element_errors
+    [Capybara::RackTest::Errors::StaleElementReferenceError]
+  end
 end

@@ -1,15 +1,16 @@
 # frozen_string_literal: true
+
 require 'capybara'
 
 module Capybara
   module DSL
     def self.included(base)
-      warn "including Capybara::DSL in the global scope is not recommended!" if base == Object
+      warn 'including Capybara::DSL in the global scope is not recommended!' if base == Object
       super
     end
 
     def self.extended(base)
-      warn "extending the main object with Capybara::DSL is not recommended!" if base == TOPLEVEL_BINDING.eval("self")
+      warn 'extending the main object with Capybara::DSL is not recommended!' if base == TOPLEVEL_BINDING.eval('self')
       super
     end
 
@@ -17,16 +18,14 @@ module Capybara
     #
     # Shortcut to working in a different session.
     #
-    def using_session(name, &block)
-      Capybara.using_session(name, &block)
+    def using_session(name_or_session, &block)
+      Capybara.using_session(name_or_session, &block)
     end
 
-    ##
-    #
     # Shortcut to using a different wait time.
     #
     def using_wait_time(seconds, &block)
-      Capybara.using_wait_time(seconds, &block)
+      page.using_wait_time(seconds, &block)
     end
 
     ##
@@ -48,8 +47,16 @@ module Capybara
     end
 
     Session::DSL_METHODS.each do |method|
-      define_method method do |*args, &block|
-        page.send method, *args, &block
+      if RUBY_VERSION >= '2.7'
+        class_eval <<~METHOD, __FILE__, __LINE__ + 1
+          def #{method}(...)
+            page.method("#{method}").call(...)
+          end
+        METHOD
+      else
+        define_method method do |*args, &block|
+          page.send method, *args, &block
+        end
       end
     end
   end

@@ -1,17 +1,17 @@
-<%# frozen_string_literal: true %>
+
 <h1>Form</h1>
 
-<form action="/form" method="post">
+<form action="/form" method="post" novalidate>
 
   <p>
     <label for="form_title">Title</label>
-    <select name="form[title]" id="form_title">
-      <option>Mrs</option>
-      <option>Mr</option>
+    <select name="form[title]" id="form_title" class="title">
+      <option class="title">Mrs</option>
+      <option class="title">Mr</option>
       <option>Miss</option>
       <option disabled="disabled">Other</option>
     </select>
-    </p>
+  </p>
 
   <p>
     <label for="customer_name">Customer Name
@@ -22,6 +22,12 @@
   <p>
     <label for="customer_email">Customer Email
       <input type="text" name="form[customer_email]" value="ben@ben.com" id="customer_email"/>
+    </label>
+  </p>
+
+  <p>
+    <label for="customer_other_email">Customer Other Email
+      <input type="text" name="form[customer_other_email]" value="notben@notben.com" id="customer_other_email"/>
     </label>
   </p>
 
@@ -57,6 +63,11 @@
   </p>
 
   <p>
+    <label for="form_age">Age</label>
+    <input type="range" name="form[age]" value="18" min="13" max="100" step="0.5" id="form_age"/>
+  </p>
+
+  <p>
     <label for="form_schmooo">Schmooo</label>
     <input type="schmooo" name="form[schmooo]" value="This is Schmooo!" id="form_schmooo"/>
   </p>
@@ -89,6 +100,11 @@
   </p>
 
   <p>
+    <label for="form_hidden_image">Hidden Image</label>
+    <input type="file" name="form[hidden_image]" id="form_hidden_image" style="display: none"/>
+  </p>
+
+  <p>
     <input type="hidden" name="form[token]" value="12345" id="form_token"/>
   </p>
 
@@ -97,7 +113,7 @@
     <select name="form[locale]" id="form_locale">
       <option value="sv">Swedish</option>
       <option selected="selected" value="en">English</option>
-      <option value="fi">Finish</option>
+      <option value="fi">Finnish</option>
       <option value="no">Norwegian</option>
       <option value="jo">John's made-up language</option>
       <option value="jbo"> Lojban </option>
@@ -124,7 +140,11 @@
 
   <p>
     <label for="form_zipcode">Zipcode</label>
-    <input type="text" maxlength="5" name="form[zipcode]" id="form_zipcode" />
+    <input type="text" maxlength="5" name="form[zipcode]" id="form_zipcode" pattern="[0-9]{5,9}" />
+  </p>
+
+  <p>
+    <input maxlength="35" id="long_length" />
   </p>
 
   <p>
@@ -183,7 +203,16 @@ New line after and before textarea tag
     <label for="form_cars_tesla">Tesla</label>
     <input type="checkbox" value="ferrari" name="form[cars][]" id="form_cars_ferrari" checked="checked" style="display: none"/>
     <label for="form_cars_ferrari">Ferrari</label>
+    <input type="checkbox" value="pagani" name="form[cars][]" id="form_cars_pagani" style="position: absolute; left: -9999px"/>
+    <label for="form_cars_pagani">Pagani</label>
+    <div style="position: relative;">
+      <input type="checkbox" value="bugatti" name="form[cars][]" id="form_cars_bugatti"/>
+      <div style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; background-color: #fff;">
+        <label for="form_cars_bugatti">Bugatti</label>
+      </div>
+    </div>
     <input type="checkbox" value="ariel" name="form[cars][]" id="form_cars_ariel" style="display: none"/>
+    <input type="checkbox" value="porsche" name="form[cars][]" id="form_cars_porsche" checked="checked" style="display: none"/>
     <label>
       McLaren
       <input type="checkbox" value="mclaren" name="form[cars][]" id="form_cars_mclaren" style="display: none"/>
@@ -192,6 +221,17 @@ New line after and before textarea tag
       Koenigsegg
       <input type="checkbox" value="koenigsegg" name="form[cars][]" id="form_cars_koenigsegg" checked="checked" style="display: none"/>
     </label>
+    <input type="checkbox" value="maserati" name="form[cars][]" id="form_cars_maserati" disabled="disabled"/>
+    <label for="form_cars_maserati">Maserati</label>
+  </p>
+
+  <p>
+    <input type="text" name="form[manufacturer]" list="manufacturers" id="manufacturer"/>
+    <datalist id="manufacturers">
+      <option value="Jaguar">J</option>
+      <option value="Audi">
+      <option value="Mercedes" disabled>
+    </datalist>
   </p>
 
   <p>
@@ -233,6 +273,17 @@ New line after and before textarea tag
     </select>
   </p>
 
+  <!-- invisible multiselect and options -->
+  <p style="display: none">
+    <label for="form_dessert">Dessert</label>
+    <select name="form[dessert]" id="form_dessert" multiple="multiple">
+      <option selected="selected">Pudding</option>
+      <option>Lava cake</option>
+      <option selected="selected">Tiramisu</option>
+      <option>Panna cotta</option>
+    </select>
+  </p>
+
   <!-- visible select with invisible selected option (which some browsers may treat as visible) -->
   <p>
     <label for="form_sorbet">Sorbet</label>
@@ -240,6 +291,17 @@ New line after and before textarea tag
       <option>Chocolate</option>
       <option selected="selected" style="display: none">Vanilla</option>
       <option>Strawberry</option>
+    </select>
+  </p>
+
+  <!-- visible multiselect with invisible selected options (which some browsers may treat as visible) -->
+  <p>
+    <label for="form_cake">Cake</label>
+    <select name="form[cake]" id="form_cake" multiple="multiple">
+      <option>Butter Cake</option>
+      <option selected="selected" style="display: none">Chocolate Cake</option>
+      <option>Strawberry Cake</option>
+      <option selected="selected" style="display: none">Sponge Cake</option>
     </select>
   </p>
 
@@ -320,6 +382,9 @@ New line after and before textarea tag
       Disabled Select
       <select name="form[disabled_select]" id="form_disabled_select" disabled="disabled">
         <option value="Should not see me" selected="selected">Should not see me</option>
+        <optgroup>
+          <option value="Disabled too">Disabled too</option>
+        </optgroup>
       </select>
     </label>
   </p>
@@ -333,7 +398,6 @@ New line after and before textarea tag
     </label>
   </p>
 
-
   <p>
     <label for="form_disabled_file">
       Disabled File
@@ -341,20 +405,81 @@ New line after and before textarea tag
     </label>
   </p>
 
+  <fieldset>
+    <input name="form[enabled_fieldset_child]" id="form_enabled_fieldset_child"/>
+  </fieldset>
+
+  <fieldset disabled="disabled" id="form_disabled_fieldset">
+    <legend>Disabled Child</legend>
+    <input name="form[disabled_fieldset_child]" id="form_disabled_fieldset_child"/>
+    <select>
+      <option>Disabled Child Option</option>
+    </select>
+  </fieldset>
+
+  <fieldset disabled="disabled">
+    <legend>
+      Nested Disabled
+      <input type="checkbox" name="form[disabled_fieldeset_legend_child]" id="form_disabled_fieldset_legend_child"/>
+    </legend>
+    <legend>
+      Another WLegend
+      <input type="checkbox" name="form[disabled_fieldeset_second_legend_child]" id="form_disabled_fieldset_second_legend_child"/>
+    </legend>
+    <fieldset>
+      <legend>
+        Disabled?
+        <input id="form_disabled_fieldset_descendant_legend_child">
+      </legend>
+      <input name="form[disabled_fieldset_descendant]" id="form_disabled_fieldset_descendant"/>
+    </fieldset>
+  </fieldset>
+
   <p>
-    <input type="button" name="form[fresh]" id="fresh_btn" value="i am fresh"/>
+    <select data-test-id="my_test_id">
+      <optgroup label="Level One">
+       <option> A.1 </option>
+      </optgroup>
+      <optgroup label="Level Two" disabled="disabled">
+       <option> A.B.1 </option>
+      </optgroup>
+      <option> A.2 </option>
+    </select>
+  </p>
+
+  <p>
+    <input type="button" aria-label="Aria button" name="form[fresh]" id="fresh_btn" value="i am fresh"/>
     <input type="submit" name="form[awesome]" id="awe123" title="What an Awesome Button" value="awesome"/>
     <input type="submit" name="form[crappy]" id="crap321" value="crappy"/>
     <input type="image" name="form[okay]" id="okay556" title="Okay 556 Image" value="okay" alt="oh hai thar"/>
     <button type="submit" id="click_me_123" title="Click Title button" value="click_me">Click me!</button>
     <button type="submit" name="form[no_value]">No Value!</button>
     <button id="no_type">No Type!</button>
+    <button><img alt="A horse eating hay"/></button>
+    <button id="button_with_label"></button>
+    <label for="button_with_label">button with label element</label>
+    <label>
+      button within label element
+      <button></button>
+    </label>
     <input type="button" disabled="disabled" value="Disabled button"/>
+    <span role="button">ARIA button</span>
+  </p>
+
+  <p>
+    <input type="date" name="form[date]" id="form_date"/>
+    <input type="time" name="form[time]" id="form_time"/>
+    <input type="datetime-local" name="form[datetime]" id="form_datetime">
   </p>
 
   <p>
     <input id="readonly" name="form[readonly_test]" readonly/>
     <input id="not_readonly" name="form[readonly_test]" />
+  </p>
+
+  <p>
+    <input id="required" name="form[required]" required />
+    <input id="length" name="form[length]" minlength="4" maxlength="4" />
   </p>
 </form>
 
@@ -365,14 +490,21 @@ New line after and before textarea tag
   <input type="text" name="nested_label" id="nested_label"/>
 </label>
 
+<label id="wrapper_label">
+  Wrapper Label
+  <input type="checkbox"/>
+</label>
+
 <form id="form1" action="/form" method="post">
   <input type="text" name="form[which_form]" value="form1" id="form_which_form"/>
   <input type="text" name="form[for_form2]" value="for_form2" form="form2"/>
   <input type="submit" name="form[submit_form1]" value="submit_form1" id="submit_form1"/>
 </form>
 
+<button type="submit" name="form[outside_button]" value="outside_button" form="form2">Outside!</button>
+
 <form id="form2" action="/form" method="post">
-  <input type="text" name="form[which_form]" value="form2" id="form_which_form"/>
+  <input type="text" name="form[which_form]" value="form2" id="form_which_form2"/>
   <input type="submit" name="form[unused]" value="unused"/>
   <button type="submit" name="form[other_form_button]" value="other_form_button" form="form1">Form1</button>
 </form>
@@ -387,8 +519,6 @@ New line after and before textarea tag
 </select>
 
 <input type="submit" name="form[outside_submit]" value="outside_submit" form="form1"/>
-<button type="submit" name="form[outside_button]" value="outside_button" form="form2">Outside!</button>
-
 
 <form id="get-form" action="/form/get?foo=bar" method="get">
   <p>
@@ -397,7 +527,8 @@ New line after and before textarea tag
   </p>
 
   <p>
-    <input type="submit" name="form[mediocre]" id="mediocre" value="med"/>
+    <input type="submit" name="form[mediocre]" id="mediocre" value="med" aria-label="Mediocre Button"/>
+    <input type="submit" formaction="/form/get?bar=foo" id="mediocre2" value="med2"/>
   <p>
 </form>
 
@@ -455,6 +586,11 @@ New line after and before textarea tag
   </p>
 
   <p>
+    <label for="form_directory_upload">Directory Upload</label>
+    <input type="file" name="form[multiple_documents][]" id="form_directory_upload" multiple="multiple" webkitdirectory="webkitdirectory" mozdirectory="mozdirectory" />
+  </p>
+
+  <p>
     <input type="submit" value="Upload Multiple"/>
   <p>
 </form>
@@ -462,6 +598,14 @@ New line after and before textarea tag
 <form action="/redirect" method="post">
   <p>
     <input type="submit" value="Go FAR"/>
+  </p>
+
+  <input type="hidden" name="form[data]" value="TWTW"/>
+  <p>
+    <button formaction='/redirect_307'>Go 307</button>
+  </p>
+  <p>
+    <button formaction='/redirect_308'>Go 308</button>
   </p>
 </form>
 
@@ -482,9 +626,10 @@ New line after and before textarea tag
     <label for="html5_search">Html5 Search</label>
     <input type="search" name="form[html5_search]" value="what are you looking for" id="html5_search"/>
   </p>
+  <p id="emergency">Emergency Number</p>
   <p>
     <label for="html5_tel">Html5 Tel</label>
-    <input type="tel" name="form[html5_tel]" value="911" id="html5_tel"/>
+    <input type="tel" aria-labelledby="emergency" name="form[html5_tel]" value="911" id="html5_tel"/>
   </p>
   <p>
     <label for="html5_color">Html5 Color</label>
@@ -507,7 +652,7 @@ New line after and before textarea tag
 
 <form action="/other_form" method="post">
   <p>
-    <input type="text" name="form[which_form]" value="formaction form"/>
+    <input type="text" name="form[which_form]" value="formaction form" aria-label="Unlabelled Input"/>
   </p>
   <input type="submit" name="form[button]" formaction="/form" value="Formaction button"/>
   <input type="submit" name="form[button]" formaction="/form/get" formmethod="get" value="Formmethod button"/>
@@ -525,4 +670,35 @@ New line after and before textarea tag
   </p>
 </form>
 
+<label>Confusion
+  <input type="checkbox" id="confusion_checkbox" class="confusion-checkbox confusion"/>
+</label>
 
+<label>Confusion
+  <input type="text" id="confusion_text" class="confusion-text confusion"/>
+</label>
+
+<label>Confusion
+  <textarea id="confusion_textarea" class="confusion confusion-textarea"></textarea>
+</label>
+
+<p>
+  <label for="asterisk_input">With Asterisk<abbr title="required">*</abbr></label>
+  <input id="asterisk_input" type="number"value="2016"/>
+</p>
+
+<p>
+  <input id="special" {custom}="abcdef" value="custom attribute"/>
+</p>
+
+
+<label for="multi_label_checkbox">
+  Label to click
+</label>
+<div>Something random that justifies the usage of a separate label</div>
+<label>
+  <div>
+    <input type="checkbox" id="multi_label_checkbox" style="display: none"/>
+    <div>Visual representation of the checkbox</div>
+  </div>
+</label>

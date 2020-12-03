@@ -1,18 +1,17 @@
 # frozen_string_literal: true
-require 'capybara/dsl'
+
 require 'rspec/core'
+require 'capybara/dsl'
 require 'capybara/rspec/matchers'
 require 'capybara/rspec/features'
+require 'capybara/rspec/matcher_proxies'
 
 RSpec.configure do |config|
-  config.include Capybara::DSL, :type => :feature
-  config.include Capybara::RSpecMatchers, :type => :feature
-  config.include Capybara::RSpecMatchers, :type => :view
-
-  # A work-around to support accessing the current example that works in both
-  # RSpec 2 and RSpec 3.
-  fetch_current_example = RSpec.respond_to?(:current_example) ?
-    proc { RSpec.current_example } : proc { |context| context.example }
+  config.include Capybara::DSL, type: :feature
+  config.include Capybara::RSpecMatchers, type: :feature
+  config.include Capybara::DSL, type: :system
+  config.include Capybara::RSpecMatchers, type: :system
+  config.include Capybara::RSpecMatchers, type: :view
 
   # The before and after blocks must run instantaneously, because Capybara
   # might not actually be used in all examples where it's included.
@@ -22,12 +21,11 @@ RSpec.configure do |config|
       Capybara.use_default_driver
     end
   end
-  config.before do
+
+  config.before do |example|
     if self.class.include?(Capybara::DSL)
-      example = fetch_current_example.call(self)
       Capybara.current_driver = Capybara.javascript_driver if example.metadata[:js]
       Capybara.current_driver = example.metadata[:driver] if example.metadata[:driver]
     end
   end
 end
-

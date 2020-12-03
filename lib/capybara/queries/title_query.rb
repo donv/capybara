@@ -1,21 +1,19 @@
 # frozen_string_literal: true
+
 module Capybara
   # @api private
   module Queries
     class TitleQuery < BaseQuery
-      def initialize(expected_title, options = {})
-        @expected_title = expected_title
+      def initialize(expected_title, **options)
+        @expected_title = expected_title.is_a?(Regexp) ? expected_title : expected_title.to_s
         @options = options
-        unless @expected_title.is_a?(Regexp)
-          @expected_title = Capybara::Helpers.normalize_whitespace(@expected_title)
-        end
-        @search_regexp = Capybara::Helpers.to_regexp(@expected_title)
+        super(@options)
+        @search_regexp = Helpers.to_regexp(@expected_title, all_whitespace: true, exact: options.fetch(:exact, false))
         assert_valid_keys
       end
 
       def resolves_for?(node)
-        @actual_title = node.title
-        @actual_title.match(@search_regexp)
+        (@actual_title = node.title).match?(@search_regexp)
       end
 
       def failure_message
@@ -26,15 +24,15 @@ module Capybara
         failure_message_helper(' not')
       end
 
-      private
+    private
 
       def failure_message_helper(negated = '')
-        verb = (@expected_title.is_a?(Regexp))? 'match' : 'include'
+        verb = @expected_title.is_a?(Regexp) ? 'match' : 'include'
         "expected #{@actual_title.inspect}#{negated} to #{verb} #{@expected_title.inspect}"
       end
 
       def valid_keys
-        [:wait]
+        %i[wait exact]
       end
     end
   end

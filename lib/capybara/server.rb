@@ -1,56 +1,15 @@
 # frozen_string_literal: true
+
 require 'uri'
 require 'net/http'
 require 'rack'
+require 'capybara/server/middleware'
+require 'capybara/server/animation_disabler'
+require 'capybara/server/checker'
 
 module Capybara
+  # @api private
   class Server
-    class Middleware
-      class Counter
-        attr_reader :value
-
-        def initialize
-          @value = 0
-          @mutex = Mutex.new
-        end
-
-        def increment
-          @mutex.synchronize { @value += 1 }
-        end
-
-        def decrement
-          @mutex.synchronize { @value -= 1 }
-        end
-      end
-
-      attr_accessor :error
-
-      def initialize(app)
-        @app = app
-        @counter = Counter.new
-      end
-
-      def pending_requests?
-        @counter.value > 0
-      end
-
-      def call(env)
-        if env["PATH_INFO"] == "/__identify__"
-          [200, {}, [@app.object_id.to_s]]
-        else
-          @counter.increment
-          begin
-            @app.call(env)
-          rescue *Capybara.server_errors => e
-            @error = e unless @error
-            raise e
-          ensure
-            @counter.decrement
-          end
-        end
-      end
-    end
-
     class << self
       def ports
         @ports ||= {}
@@ -59,38 +18,55 @@ module Capybara
 
     attr_reader :app, :port, :host
 
-    def initialize(app, port=Capybara.server_port, host=Capybara.server_host)
+    def initialize(app,
+                   *deprecated_options,
+                   port: Capybara.server_port,
+                   host: Capybara.server_host,
+                   reportable_errors: Capybara.server_errors,
+                   extra_middleware: [])
+      unless deprecated_options.empty?
+        warn 'Positional arguments, other than the application, to Server#new are deprecated, please use keyword arguments'
+      end
       @app = app
+      @extra_middleware = extra_middleware
       @server_thread = nil # suppress warnings
-      @host, @port = host, port
+      @host = deprecated_options[1] || host
+      @reportable_errors = deprecated_options[2] || reportable_errors
+      @port = deprecated_options[0] || port
       @port ||= Capybara::Server.ports[port_key]
       @port ||= find_available_port(host)
+      @checker = Checker.new(@host, @port)
     end
 
     def reset_error!
-      middleware.error = nil
+      middleware.clear_error
     end
 
     def error
       middleware.error
     end
 
+    def using_ssl?
+      @checker.ssl?
+    end
+
     def responsive?
-      return false if @server_thread && @server_thread.join(0)
+      return false if @server_thread&.join(0)
 
-      res = Net::HTTP.start(host, port) { |http| http.get('/__identify__') }
+      res = @checker.request { |http| http.get('/__identify__') }
 
-      if res.is_a?(Net::HTTPSuccess) or res.is_a?(Net::HTTPRedirection)
-        return res.body == app.object_id.to_s
-      end
-    rescue SystemCallError
-      return false
+      return res.body == app.object_id.to_s if res.is_a?(Net::HTTPSuccess) || res.is_a?(Net::HTTPRedirection)
+    rescue SystemCallError, Net::ReadTimeout, OpenSSL::SSL::SSLError
+      false
     end
 
     def wait_for_pending_requests
-      Timeout.timeout(60) { sleep(0.01) while pending_requests? }
-    rescue Timeout::Error
-      raise "Requests did not finish in 60 seconds"
+      timer = Capybara::Helpers.timer(expire_in: 60)
+      while pending_requests?
+        raise "Requests did not finish in 60 seconds: #{middleware.pending_requests}" if timer.expired?
+
+        sleep 0.01
+      end
     end
 
     def boot
@@ -101,18 +77,25 @@ module Capybara
           Capybara.server.call(middleware, port, host)
         end
 
-        Timeout.timeout(60) { @server_thread.join(0.1) until responsive? }
+        timer = Capybara::Helpers.timer(expire_in: 60)
+        until responsive?
+          raise 'Rack application timed out during boot' if timer.expired?
+
+          @server_thread.join(0.1)
+        end
       end
-    rescue Timeout::Error
-      raise "Rack application timed out during boot"
-    else
+
       self
+    end
+
+    def base_url
+      "http#{'s' if using_ssl?}://#{host}:#{port}"
     end
 
   private
 
     def middleware
-      @middleware ||= Middleware.new(app)
+      @middleware ||= Middleware.new(app, @reportable_errors, @extra_middleware)
     end
 
     def port_key
@@ -125,9 +108,19 @@ module Capybara
 
     def find_available_port(host)
       server = TCPServer.new(host, 0)
-      server.addr[1]
+      port = server.addr[1]
+      server.close
+
+      # Workaround issue where some platforms (mac, ???) when passed a host
+      # of '0.0.0.0' will return a port that is only available on one of the
+      # ip addresses that resolves to, but the next binding to that port requires
+      # that port to be available on all ips
+      server = TCPServer.new(host, port)
+      port
+    rescue Errno::EADDRINUSE
+      retry
     ensure
-      server.close if server
+      server&.close
     end
   end
 end

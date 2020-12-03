@@ -1,20 +1,25 @@
+# frozen_string_literal: true
+
 module Capybara
   module Queries
     class MatchQuery < Capybara::Queries::SelectorQuery
-      VALID_KEYS = [:text, :visible, :exact, :wait]
-
       def visible
-        if options.has_key?(:visible)
-          super
-        else
-          :all
-        end
+        options.key?(:visible) ? super : :all
       end
 
-      private
+    private
+
+      def assert_valid_keys
+        invalid_options = @options.keys & COUNT_KEYS
+        unless invalid_options.empty?
+          raise ArgumentError, "Match queries don't support quantity options. Invalid keys - #{invalid_options.join(', ')}"
+        end
+
+        super
+      end
 
       def valid_keys
-        VALID_KEYS + @selector.custom_filters.keys
+        super - COUNT_KEYS
       end
     end
   end

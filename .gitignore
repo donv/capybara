@@ -9,6 +9,7 @@ tmp
 spec.opts
 .rvmrc
 .ruby-version
+.java-version
 .ruby-gemset
 capybara-*.html
 .yardoc
@@ -19,3 +20,6 @@ chromedriver.log
 bundler_stubs
 bin
 gem-private_key.pem
+save_path_tmp
+vendor/bundle
+.byebug_history

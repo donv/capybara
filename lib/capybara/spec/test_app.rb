@@ -1,12 +1,20 @@
 # frozen_string_literal: true
+
 require 'sinatra/base'
 require 'tilt/erb'
 require 'rack'
 require 'yaml'
 
 class TestApp < Sinatra::Base
-  class TestAppError < StandardError; end
+  class TestAppError < Exception; end # rubocop:disable Lint/InheritException
 
+  class TestAppOtherError < Exception # rubocop:disable Lint/InheritException
+    def initialize(string1, msg)
+      super()
+      @something = string1
+      @message = msg
+    end
+  end
   set :root, File.dirname(__FILE__)
   set :static, true
   set :raise_errors, true
@@ -15,7 +23,7 @@ class TestApp < Sinatra::Base
   # Also check lib/capybara/spec/views/*.erb for pages not listed here
 
   get '/' do
-    response.set_cookie('capybara', { value: 'root cookie', domain: request.host, path: request.path} )
+    response.set_cookie('capybara', value: 'root cookie', domain: request.host, path: request.path)
     'Hello world! <a href="with_html">Relative</a>'
   end
 
@@ -27,13 +35,25 @@ class TestApp < Sinatra::Base
     redirect '/redirect_again'
   end
 
+  get '/redirect_with_fragment' do
+    redirect '/landed#with_fragment'
+  end
+
   get '/redirect_again' do
     redirect '/landed'
   end
 
+  post '/redirect_307' do
+    redirect '/landed', 307
+  end
+
+  post '/redirect_308' do
+    redirect '/landed', 308
+  end
+
   get '/referer_base' do
-    '<a href="/get_referer">direct link</a>' +
-    '<a href="/redirect_to_get_referer">link via redirect</a>' +
+    '<a href="/get_referer">direct link</a>' \
+    '<a href="/redirect_to_get_referer">link via redirect</a>' \
     '<form action="/get_referer" method="get"><input type="submit"></form>'
   end
 
@@ -42,7 +62,7 @@ class TestApp < Sinatra::Base
   end
 
   get '/get_referer' do
-    request.referer.nil? ? "No referer" : "Got referer: #{request.referer}"
+    request.referer.nil? ? 'No referer' : "Got referer: #{request.referer}"
   end
 
   get '/host' do
@@ -52,26 +72,30 @@ class TestApp < Sinatra::Base
   get '/redirect/:times/times' do
     times = params[:times].to_i
     if times.zero?
-      "redirection complete"
+      'redirection complete'
     else
       redirect "/redirect/#{times - 1}/times"
     end
   end
 
   get '/landed' do
-    "You landed"
+    'You landed'
+  end
+
+  post '/landed' do
+    "You post landed: #{params.dig(:form, 'data')}"
   end
 
   get '/with-quotes' do
-    %q{"No," he said, "you can't do that."}
+    %q("No," he said, "you can't do that.")
   end
 
   get '/form/get' do
-    '<pre id="results">' + params[:form].to_yaml + '</pre>'
+    %(<pre id="results">#{params[:form].to_yaml}</pre>)
   end
 
   post '/relative' do
-    '<pre id="results">' + params[:form].to_yaml + '</pre>'
+    %(<pre id="results">#{params[:form].to_yaml}</pre>)
   end
 
   get '/favicon.ico' do
@@ -82,12 +106,12 @@ class TestApp < Sinatra::Base
     redirect '/redirect_again'
   end
 
-  delete "/delete" do
-    "The requested object was deleted"
+  delete '/delete' do
+    'The requested object was deleted'
   end
 
-  get "/delete" do
-    "Not deleted"
+  get '/delete' do
+    'Not deleted'
   end
 
   get '/redirect_back' do
@@ -122,7 +146,11 @@ class TestApp < Sinatra::Base
   end
 
   get '/error' do
-    raise TestAppError, "some error"
+    raise TestAppError, 'some error'
+  end
+
+  get '/other_error' do
+    raise TestAppOtherError.new('something', 'other error')
   end
 
   get '/load_error' do
@@ -133,12 +161,28 @@ class TestApp < Sinatra::Base
     erb :with_html, locals: { referrer: request.referrer }
   end
 
+  get '/with_title' do
+    <<-HTML
+      <title>#{params[:title] || 'Test Title'}</title>
+      <body>
+        <svg><title>abcdefg</title></svg>
+      </body>
+    HTML
+  end
+
+  get '/download.csv' do
+    content_type 'text/csv'
+    'This, is, comma, separated' \
+    'Thomas, Walpole, was , here'
+  end
+
   get '/:view' do |view|
     erb view.to_sym, locals: { referrer: request.referrer }
   end
 
   post '/form' do
-    '<pre id="results">' + params[:form].to_yaml + '</pre>'
+    self.class.form_post_count += 1
+    %(<pre id="results">#{params[:form].merge('post_count' => self.class.form_post_count).to_yaml}</pre>)
   end
 
   post '/upload_empty' do
@@ -150,30 +194,35 @@ class TestApp < Sinatra::Base
   end
 
   post '/upload' do
-    begin
-      buffer = []
-      buffer << "Content-type: #{params[:form][:document][:type]}"
-      buffer << "File content: #{params[:form][:document][:tempfile].read}"
-      buffer.join(' | ')
-    rescue
-      'No file uploaded'
-    end
+    buffer = []
+    buffer << "Content-type: #{params.dig(:form, :document, :type)}"
+    buffer << "File content: #{params.dig(:form, :document, :tempfile).read}"
+    buffer.join(' | ')
+  rescue StandardError
+    'No file uploaded'
   end
 
   post '/upload_multiple' do
-    begin
-      buffer = ["#{params[:form][:multiple_documents].size}"]
-      params[:form][:multiple_documents].each do |doc|
-        buffer << "Content-type: #{doc[:type]}"
-        buffer << "File content: #{doc[:tempfile].read}"
-      end
-      buffer.join(' | ')
-    rescue
-      'No files uploaded'
+    docs = params.dig(:form, :multiple_documents)
+    buffer = [docs.size.to_s]
+    docs.each do |doc|
+      buffer << "Content-type: #{doc[:type]}"
+      buffer << "File content: #{doc[:tempfile].read}"
     end
+    buffer.join(' | ')
+  rescue StandardError
+    'No files uploaded'
   end
+
+  get '/apple-touch-icon-precomposed.png' do
+    halt(404)
+  end
+
+  class << self
+    attr_accessor :form_post_count
+  end
+
+  @form_post_count = 0
 end
 
-if __FILE__ == $0
-  Rack::Handler::WEBrick.run TestApp, :Port => 8070
-end
+Rack::Handler::Puma.run TestApp, Port: 8070 if $PROGRAM_NAME == __FILE__

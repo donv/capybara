@@ -1,4 +1,4 @@
-<%# frozen_string_literal: true %>
+
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
   <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
@@ -12,15 +12,30 @@
     <h1>FooBar</h1>
 
     <p id="change">This is text</p>
+    <a id="drag_link" href='#'>This link is non-HTML5 draggable</a>
     <div id="drag">
       <p>This is a draggable element.</p>
     </div>
     <div id="drop">
       <p>It should be dropped here.</p>
     </div>
+    <div id="drop_scroll">
+      <p>It should be dropped here.</p>
+    </div>
+    <div id="drop_html5_scroll" class="drop">
+      <p>It should be dropped here.</p>
+    </div>
+    <div id="drag_html5" draggable="true">
+      <p>This is an HTML5 draggable element.</p>
+    </div>
+    <a id="drag_link_html5" href="#"><p>This is an HTML5 draggable link</p></a>
+    <div id="drop_html5" class="drop">
+      <p>It should be dropped here.</p>
+    </div>
 
     <p><a href="#" id="clickable">Click me</a></p>
     <p><a href="#" id="slow-click">Slowly</a></p>
+    <p><span id="aria-button" role="button">ARIA button</span></p>
 
     <p>
       <select id="waiter">
@@ -40,7 +55,8 @@
     <p>
       <div contenteditable='true' id='existing_content_editable'>Editable content</div>
       <div contenteditable='true' id='blank_content_editable' style='height: 1em;'></div>
-      <div contenteditable='true' style='height: 1em;'>
+      <div contenteditable='true' id='existing_content_editable_child_parent' style='height: 1em;'>
+        Some content
         <div id='existing_content_editable_child' style='height: 1em;'>Content</div>
       </div>
     </p>
@@ -71,10 +87,15 @@
       <a href="#" id="change-title">Change title</a>
     </p>
 
+    <p>
+      <a href="#" id="change-size">Change size</a>
+    </p>
+
     <p id="click-test">Click me</p>
 
     <p>
       <a href="#" id="open-alert">Open alert</a>
+      <a href="/with_html" id="alert-page-change">Alert page change</a>
     </p>
 
     <p>
@@ -95,9 +116,15 @@
     </p>
 
     <p>
-      <input id="disable-on-click"/>
+      <a href="#" id="open-prompt-with-default">Open defaulted prompt</a>
     </p>
 
+    <p>
+      <input id="disable-on-click"/>
+    </p>
+    <p>
+      <input id="set-storage"/>
+    </p>
     <p>
       <a href="#" id="delayed-page-change">Change page</a>
       <a href="/with_html?options[]=things">Non-escaped query options</a>
@@ -108,6 +135,24 @@
       <input type="test" name="with-key-events" id="with-key-events">
       <p id="key-events-output"></p>
     </p>
+
+    <p>
+      <input type="file" id="hidden_file" style="opacity:0; display: none;">
+      <label for="hidden_file">Label for hidden file input</label>
+    </p>
+
+    <p>
+      <input type="file" id="multiple-file" multiple="multiple"/>
+    </p>
+
+    <div id="drag_scroll">
+      <p>This is a draggable element.</p>
+    </div>
+    <div id="drag_html5_scroll" draggable="true">
+      <p>This is an HTML5 draggable element.</p>
+    </div>
+
+    <div id="shadow"></div>
     <script type="text/javascript">
       // a javascript comment
       var aVar = 123;

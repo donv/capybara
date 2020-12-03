@@ -1,7 +1,7 @@
 # frozen_string_literal: true
+
 module Capybara
   module Node
-
     ##
     #
     # A {Capybara::Document} represents an HTML document. Any operation
@@ -20,12 +20,28 @@ module Capybara
       #
       # @return [String]    The text of the document
       #
-      def text(type=nil)
-        find(:xpath, '/html').text(type)
+      def text(type = nil, normalize_ws: false)
+        find(:xpath, '/html').text(type, normalize_ws: normalize_ws)
       end
 
+      ##
+      #
+      # @return [String]    The title of the document
+      #
       def title
         session.driver.title
+      end
+
+      def execute_script(*args)
+        find(:xpath, '/html').execute_script(*args)
+      end
+
+      def evaluate_script(*args)
+        find(:xpath, '/html').evaluate_script(*args)
+      end
+
+      def scroll_to(*args, **options)
+        find(:xpath, '//body').scroll_to(*args, **options)
       end
     end
   end

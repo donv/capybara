@@ -1,7 +1,11 @@
 # frozen_string_literal: true
+
 require 'timeout'
 require 'nokogiri'
 require 'xpath'
+require 'forwardable'
+require 'capybara/config'
+require 'capybara/registration_container'
 
 module Capybara
   class CapybaraError < StandardError; end
@@ -20,15 +24,39 @@ module Capybara
   class ReadOnlyElementError < CapybaraError; end
 
   class << self
-    attr_reader :app_host, :default_host
-    attr_accessor :asset_host, :run_server, :always_include_port
-    attr_accessor :server_port, :exact, :match, :exact_options, :visible_text_only
-    attr_accessor :default_selector, :default_max_wait_time, :ignore_hidden_elements
-    attr_accessor :save_path, :wait_on_first_by_default, :automatic_reload
-    attr_accessor :reuse_server, :raise_server_errors, :server_errors
-    attr_writer :default_driver, :current_driver, :javascript_driver, :session_name, :server_host
-    attr_reader :save_and_open_page_path
-    attr_accessor :app
+    extend Forwardable
+
+    # DelegateCapybara global configurations
+    # @!method app
+    #   See {Capybara.configure}
+    # @!method reuse_server
+    #   See {Capybara.configure}
+    # @!method threadsafe
+    #   See {Capybara.configure}
+    # @!method server
+    #   See {Capybara.configure}
+    # @!method default_driver
+    #   See {Capybara.configure}
+    # @!method javascript_driver
+    #   See {Capybara.configure}
+    # @!method allow_gumbo
+    #   See {Capybara.configure}
+    Config::OPTIONS.each do |method|
+      def_delegators :config, method, "#{method}="
+    end
+
+    # Delegate Capybara global configurations
+    # @!method default_selector
+    #   See {Capybara.configure}
+    # @!method default_max_wait_time
+    #   See {Capybara.configure}
+    # @!method app_host
+    #   See {Capybara.configure}
+    # @!method always_include_port
+    #   See {Capybara.configure}
+    SessionConfig::OPTIONS.each do |method|
+      def_delegators :config, method, "#{method}="
+    end
 
     ##
     #
@@ -39,30 +67,50 @@ module Capybara
     #       config.app_host   = 'http://www.google.com'
     #     end
     #
-    # === Configurable options
+    # #### Configurable options
     #
-    # [app_host = String/nil]             The default host to use when giving a relative URL to visit, must be a valid URL e.g. http://www.example.com
-    # [always_include_port = Boolean]     Whether the Rack server's port should automatically be inserted into every visited URL (Default: false)
-    # [asset_host = String]               Where dynamic assets are hosted - will be prepended to relative asset locations if present (Default: nil)
-    # [run_server = Boolean]              Whether to start a Rack server for the given Rack app (Default: true)
-    # [raise_server_errors = Boolean]     Should errors raised in the server be raised in the tests? (Default: true)
-    # [server_errors = Array\<Class\>]    Error classes that should be raised in the tests if they are raised in the server and Capybara.raise_server_errors is true (Default: [StandardError])
-    # [default_selector = :css/:xpath]    Methods which take a selector use the given type by default (Default: :css)
-    # [default_max_wait_time = Numeric]   The maximum number of seconds to wait for asynchronous processes to finish (Default: 2)
-    # [ignore_hidden_elements = Boolean]  Whether to ignore hidden elements on the page (Default: true)
-    # [automatic_reload = Boolean]        Whether to automatically reload elements as Capybara is waiting (Default: true)
-    # [save_path = String]  Where to put pages saved through save_(page|screenshot), save_and_open_(page|screenshot) (Default: Dir.pwd)
-    # [wait_on_first_by_default = Boolean]   Whether Node#first defaults to Capybara waiting behavior for at least 1 element to match (Default: false)
-    # [reuse_server = Boolean]  Reuse the server thread between multiple sessions using the same app object (Default: true)
-    # === DSL Options
+    # - **allow_gumbo** (Boolean = `false`) - When `nokogumbo` is available, whether it will be used to parse HTML strings.
+    # - **always_include_port** (Boolean = `false`) - Whether the Rack server's port should automatically be inserted into every visited URL
+    #   unless another port is explicitly specified.
+    # - **app_host** (String, `nil`) - The default host to use when giving a relative URL to visit, must be a valid URL e.g. `http://www.example.com`.
+    # - **asset_host** (String = `nil`) - Where dynamic assets are hosted - will be prepended to relative asset locations if present.
+    # - **automatic_label_click** (Boolean = `false`) - Whether {Capybara::Node::Element#choose Element#choose}, {Capybara::Node::Element#check Element#check},
+    #   {Capybara::Node::Element#uncheck Element#uncheck} will attempt to click the associated `<label>` element if the checkbox/radio button are non-visible.
+    # - **automatic_reload** (Boolean = `true`) - Whether to automatically reload elements as Capybara is waiting.
+    # - **default_max_wait_time** (Numeric = `2`) - The maximum number of seconds to wait for asynchronous processes to finish.
+    # - **default_normalize_ws** (Boolean = `false`) - Whether text predicates and matchers use normalize whitespace behavior.
+    # - **default_selector** (`:css`, `:xpath` = `:css`) - Methods which take a selector use the given type by default. See also {Capybara::Selector}.
+    # - **default_set_options** (Hash = `{}`) - The default options passed to {Capybara::Node::Element#set Element#set}.
+    # - **enable_aria_label** (Boolean = `false`) - Whether fields, links, and buttons will match against `aria-label` attribute.
+    # - **enable_aria_role** (Boolean = `false`) - Selectors will check for relevant aria role (currently only `button`).
+    # - **exact** (Boolean = `false`) - Whether locators are matched exactly or with substrings. Only affects selector conditions
+    #   written using the `XPath#is` method.
+    # - **exact_text** (Boolean = `false`) - Whether the text matchers and `:text` filter match exactly or on substrings.
+    # - **ignore_hidden_elements** (Boolean = `true`) - Whether to ignore hidden elements on the page.
+    # - **match** (`:one`, `:first`, `:prefer_exact`, `:smart` = `:smart`) - The matching strategy to find nodes.
+    # - **predicates_wait** (Boolean = `true`) - Whether Capybara's predicate matchers use waiting behavior by default.
+    # - **raise_server_errors** (Boolean = `true`) - Should errors raised in the server be raised in the tests?
+    # - **reuse_server** (Boolean = `true`) - Whether to reuse the server thread between multiple sessions using the same app object.
+    # - **run_server** (Boolean = `true`) - Whether to start a Rack server for the given Rack app.
+    # - **save_path** (String = `Dir.pwd`) - Where to put pages saved through {Capybara::Session#save_page save_page}, {Capybara::Session#save_screenshot save_screenshot},
+    #   {Capybara::Session#save_and_open_page save_and_open_page}, or {Capybara::Session#save_and_open_screenshot save_and_open_screenshot}.
+    # - **server** (Symbol = `:default` (which uses puma)) - The name of the registered server to use when running the app under test.
+    # - **server_port** (Integer) - The port Capybara will run the application server on, if not specified a random port will be used.
+    # - **server_errors** (Array\<Class> = `[Exception]`) - Error classes that should be raised in the tests if they are raised in the server
+    #   and {configure raise_server_errors} is `true`.
+    # - **test_id** (Symbol, String, `nil` = `nil`) - Optional attribute to match locator against with built-in selectors along with id.
+    # - **threadsafe** (Boolean = `false`) - Whether sessions can be configured individually.
+    # - **w3c_click_offset** (Boolean = 'false') - Whether click offsets should be from element center (true) or top left (false)
     #
-    # when using capybara/dsl, the following options are also available:
+    # #### DSL Options
     #
-    # [default_driver = Symbol]           The name of the driver to use by default. (Default: :rack_test)
-    # [javascript_driver = Symbol]        The name of a driver to use for JavaScript enabled tests. (Default: :selenium)
+    # When using `capybara/dsl`, the following options are also available:
+    #
+    # - **default_driver** (Symbol = `:rack_test`) - The name of the driver to use by default.
+    # - **javascript_driver** (Symbol = `:selenium`) - The name of a driver to use for JavaScript enabled tests.
     #
     def configure
-      yield self
+      yield config
     end
 
     ##
@@ -79,7 +127,7 @@ module Capybara
     # @yieldreturn [Capybara::Driver::Base]   A Capybara driver instance
     #
     def register_driver(name, &block)
-      drivers[name] = block
+      drivers.send(:register, name, block)
     end
 
     ##
@@ -96,10 +144,9 @@ module Capybara
     # @yieldparam [<Rack>] app                The rack application that this server will contain.
     # @yieldparam port                        The port number the server should listen on
     # @yieldparam host                        The host/ip to bind to
-    # @yieldreturn [Capybara::Driver::Base]   A Capybara driver instance
     #
     def register_server(name, &block)
-      servers[name.to_sym] = block
+      servers.send(:register, name.to_sym, block)
     end
 
     ##
@@ -130,19 +177,20 @@ module Capybara
     # @param [Symbol] name    The name of the selector to add
     # @yield                  A block executed in the context of the new {Capybara::Selector}
     #
-    def add_selector(name, &block)
-      Capybara::Selector.add(name, &block)
+    def add_selector(name, **options, &block)
+      Capybara::Selector.add(name, **options, &block)
     end
 
     ##
     #
     # Modify a selector previously created by {Capybara.add_selector}.
-    # For example modifying the :button selector to also find divs styled
-    # to look like buttons might look like this
+    # For example, adding a new filter to the :button selector to filter based on
+    # button style (a class) might look like this
     #
     #     Capybara.modify_selector(:button) do
-    #       xpath { |locator| XPath::HTML.button(locator).or(XPath::css('div.btn')[XPath::string.n.is(locator)]) }
+    #       filter (:btn_style, valid_values: [:primary, :secondary]) { |node, style| node[:class].split.include? "btn-#{style}" }
     #     end
+    #
     #
     # @param [Symbol] name    The name of the selector to modify
     # @yield                  A block executed in the context of the existing {Capybara::Selector}
@@ -152,69 +200,26 @@ module Capybara
     end
 
     def drivers
-      @drivers ||= {}
+      @drivers ||= RegistrationContainer.new
     end
 
     def servers
-      @servers ||= {}
+      @servers ||= RegistrationContainer.new
     end
 
-    ##
-    #
-    # Register a proc that Capybara will call to run the Rack application.
-    #
-    #     Capybara.server do |app, port, host|
-    #       require 'rack/handler/mongrel'
-    #       Rack::Handler::Mongrel.run(app, :Port => port)
-    #     end
-    #
-    # By default, Capybara will try to run webrick.
-    #
-    # @yield [app, port, host]      This block receives a rack app, port, and host/ip and should run a Rack handler
-    #
-    def server(&block)
-      if block_given?
-        warn "DEPRECATED: Passing a block to Capybara::server is deprecated, please use Capybara::register_server instead"
-        @server = block
-      else
-        @server
-      end
-    end
-
-    ##
-    #
-    # Set the server to use.
-    #
-    #     Capybara.server = :webrick
-    #
-    # @param [Symbol] name     Name of the server type to use
-    # @see register_server
-    #
-    def server=(name)
-      @server = if name.respond_to? :call
-        name
-      else
-        servers[name.to_sym]
-      end
-    end
-
-    ##
-    #
     # Wraps the given string, which should contain an HTML document or fragment
     # in a {Capybara::Node::Simple} which exposes all {Capybara::Node::Matchers},
     # {Capybara::Node::Finders} and {Capybara::Node::DocumentMatchers}. This allows you to query
     # any string containing HTML in the exact same way you would query the current document in a Capybara
     # session.
     #
-    # Example: A single element
-    #
+    # @example A single element
     #     node = Capybara.string('<a href="foo">bar</a>')
     #     anchor = node.first('a')
     #     anchor[:href] #=> 'foo'
     #     anchor.text #=> 'bar'
     #
-    # Example: Multiple elements
-    #
+    # @example Multiple elements
     #     node = Capybara.string <<-HTML
     #       <ul>
     #         <li id="home">Home</li>
@@ -223,7 +228,7 @@ module Capybara
     #     HTML
     #
     #     node.find('#projects').text # => 'Projects'
-    #     node.has_selector?('li#home', :text => 'Home')
+    #     node.has_selector?('li#home', text: 'Home')
     #     node.has_selector?('#projects')
     #     node.find('ul').find('li:first-child').text # => 'Home'
     #
@@ -241,18 +246,10 @@ module Capybara
     # manually.
     #
     # @param [Rack Application] app    The rack application to run
-    # @param [Fixnum] port              The port to run the application on
+    # @param [Integer] port              The port to run the application on
     #
     def run_default_server(app, port)
-      servers[:webrick].call(app, port, server_host)
-    end
-
-    ##
-    #
-    # @return [Symbol]    The name of the driver to use by default
-    #
-    def default_driver
-      @default_driver || :rack_test
+      servers[:puma].call(app, port, server_host)
     end
 
     ##
@@ -260,16 +257,20 @@ module Capybara
     # @return [Symbol]    The name of the driver currently in use
     #
     def current_driver
-      @current_driver || default_driver
+      if threadsafe
+        Thread.current['capybara_current_driver']
+      else
+        @current_driver
+      end || default_driver
     end
     alias_method :mode, :current_driver
 
-    ##
-    #
-    # @return [Symbol]    The name of the driver used when JavaScript is needed
-    #
-    def javascript_driver
-      @javascript_driver || :selenium
+    def current_driver=(name)
+      if threadsafe
+        Thread.current['capybara_current_driver'] = name
+      else
+        @current_driver = name
+      end
     end
 
     ##
@@ -277,7 +278,7 @@ module Capybara
     # Use the default driver as the current driver
     #
     def use_default_driver
-      @current_driver = nil
+      self.current_driver = nil
     end
 
     ##
@@ -289,15 +290,7 @@ module Capybara
       Capybara.current_driver = driver
       yield
     ensure
-      @current_driver = previous_driver
-    end
-
-    ##
-    #
-    # @return [String]    The IP address bound by default server
-    #
-    def server_host
-      @server_host || '127.0.0.1'
+      self.current_driver = previous_driver
     end
 
     ##
@@ -314,12 +307,12 @@ module Capybara
 
     ##
     #
-    # The current Capybara::Session based on what is set as Capybara.app and Capybara.current_driver
+    # The current {Capybara::Session} based on what is set as {app} and {current_driver}.
     #
     # @return [Capybara::Session]     The currently used session
     #
     def current_session
-      session_pool["#{current_driver}:#{session_name}:#{app.object_id}"] ||= Capybara::Session.new(current_driver, app)
+      specified_session || session_pool["#{current_driver}:#{session_name}:#{app.object_id}"]
     end
 
     ##
@@ -328,8 +321,8 @@ module Capybara
     # as cookies.
     #
     def reset_sessions!
-      #reset in reverse so sessions that started servers are reset last
-      session_pool.reverse_each { |mode, session| session.reset! }
+      # reset in reverse so sessions that started servers are reset last
+      session_pool.reverse_each { |_mode, session| session.reset! }
     end
     alias_method :reset!, :reset_sessions!
 
@@ -340,19 +333,48 @@ module Capybara
     # @return [Symbol]    The name of the currently used session.
     #
     def session_name
-      @session_name ||= :default
+      if threadsafe
+        Thread.current['capybara_session_name'] ||= :default
+      else
+        @session_name ||= :default
+      end
+    end
+
+    def session_name=(name)
+      if threadsafe
+        Thread.current['capybara_session_name'] = name
+      else
+        @session_name = name
+      end
     end
 
     ##
     #
-    # Yield a block using a specific session name.
+    # Yield a block using a specific session name or {Capybara::Session} instance.
     #
-    def using_session(name)
-      previous_session_name = self.session_name
-      self.session_name = name
-      yield
+    def using_session(name_or_session, &block)
+      previous_session = current_session
+      previous_session_info = {
+        specified_session: specified_session,
+        session_name: session_name,
+        current_driver: current_driver,
+        app: app
+      }
+      self.specified_session = self.session_name = nil
+      if name_or_session.is_a? Capybara::Session
+        self.specified_session = name_or_session
+      else
+        self.session_name = name_or_session
+      end
+
+      if block.arity.zero?
+        yield
+      else
+        yield current_session, previous_session
+      end
     ensure
-      self.session_name = previous_session_name
+      self.session_name, self.specified_session = previous_session_info.values_at(:session_name, :specified_session)
+      self.current_driver, self.app = previous_session_info.values_at(:current_driver, :app) if threadsafe
     end
 
     ##
@@ -362,62 +384,61 @@ module Capybara
     # @param [String] html              The raw html
     # @return [Nokogiri::HTML::Document]      HTML document
     #
-    def HTML(html)
-      Nokogiri::HTML(html).tap do |document|
-        document.xpath('//textarea').each do |textarea|
-          textarea.content=textarea.content.sub(/\A\n/,'')
+    def HTML(html) # rubocop:disable Naming/MethodName
+      if Nokogiri.respond_to?(:HTML5) && Capybara.allow_gumbo # Nokogumbo installed and allowed for use
+        Nokogiri::HTML5(html).tap do |document|
+          document.xpath('//template').each do |template|
+            # template elements content is not part of the document
+            template.inner_html = ''
+          end
+          document.xpath('//textarea').each do |textarea|
+            # The Nokogumbo HTML5 parser already returns spec compliant contents
+            textarea['_capybara_raw_value'] = textarea.content
+          end
+        end
+      else
+        Nokogiri::HTML(html).tap do |document|
+          document.xpath('//template').each do |template|
+            # template elements content is not part of the document
+            template.inner_html = ''
+          end
+          document.xpath('//textarea').each do |textarea|
+            textarea['_capybara_raw_value'] = textarea.content.delete_prefix("\n")
+          end
         end
       end
     end
 
-    # @deprecated Use default_max_wait_time instead
-    def default_wait_time
-      deprecate('default_wait_time', 'default_max_wait_time', true)
-      default_max_wait_time
-    end
-
-    # @deprecated Use default_max_wait_time= instead
-    def default_wait_time=(t)
-      deprecate('default_wait_time=', 'default_max_wait_time=')
-      self.default_max_wait_time = t
-    end
-
-    def save_and_open_page_path=(path)
-      warn "DEPRECATED: #save_and_open_page_path is deprecated, please use #save_path instead. \n"\
-           "Note: Behavior is slightly different with relative paths - see documentation" unless path.nil?
-      @save_and_open_page_path = path
-    end
-
-    def app_host=(url)
-      raise ArgumentError.new("Capybara.app_host should be set to a url (http://www.example.com)") unless url.nil? || (url =~ URI::regexp)
-      @app_host = url
-    end
-
-    def default_host=(url)
-      raise ArgumentError.new("Capybara.default_host should be set to a url (http://www.example.com)") unless url.nil? || (url =~ URI::regexp)
-      @default_host = url
-    end
-
-    def included(base)
-      base.send(:include, Capybara::DSL)
-      warn "`include Capybara` is deprecated. Please use `include Capybara::DSL` instead."
-    end
-
-    def reuse_server=(bool)
-      warn "Capybara.reuse_server == false is a BETA feature and may change in a future version" unless bool
-      @reuse_server = bool
-    end
-
-    def deprecate(method, alternate_method, once=false)
-      @deprecation_notified ||= {}
-      warn "DEPRECATED: ##{method} is deprecated, please use ##{alternate_method} instead" unless once and @deprecation_notified[method]
-      @deprecation_notified[method]=true
+    def session_options
+      config.session_options
     end
 
   private
 
+    def config
+      @config ||= Capybara::Config.new
+    end
+
     def session_pool
-      @session_pool ||= {}
+      @session_pool ||= Hash.new do |hash, name|
+        hash[name] = Capybara::Session.new(current_driver, app)
+      end
+    end
+
+    def specified_session
+      if threadsafe
+        Thread.current['capybara_specified_session']
+      else
+        @specified_session ||= nil
+      end
+    end
+
+    def specified_session=(session)
+      if threadsafe
+        Thread.current['capybara_specified_session'] = session
+      else
+        @specified_session = session
+      end
     end
   end
 
@@ -443,7 +464,9 @@ module Capybara
   require 'capybara/queries/title_query'
   require 'capybara/queries/current_path_query'
   require 'capybara/queries/match_query'
-  require 'capybara/query'
+  require 'capybara/queries/ancestor_query'
+  require 'capybara/queries/sibling_query'
+  require 'capybara/queries/style_query'
 
   require 'capybara/node/finders'
   require 'capybara/node/matchers'
@@ -461,27 +484,14 @@ module Capybara
   require 'capybara/rack_test/node'
   require 'capybara/rack_test/form'
   require 'capybara/rack_test/browser'
-  require 'capybara/rack_test/css_handlers.rb'
+  require 'capybara/rack_test/css_handlers'
 
   require 'capybara/selenium/node'
   require 'capybara/selenium/driver'
 end
 
-Capybara.register_server :default do |app, port, host|
-  Capybara.run_default_server(app, port)
-end
-
-Capybara.register_server :webrick do |app, port, host|
-  require 'rack/handler/webrick'
-  Rack::Handler::WEBrick.run(app, :Host => host, :Port => port, :AccessLog => [], :Logger => WEBrick::Log::new(nil, 0))
-end
-
-Capybara.register_server :puma do |app, port, host|
-  require 'puma'
-  Puma::Server.new(app).tap do |s|
-    s.add_tcp_listener host, port
-  end.run.join
-end
+require 'capybara/registrations/servers'
+require 'capybara/registrations/drivers'
 
 Capybara.configure do |config|
   config.always_include_port = false
@@ -490,22 +500,22 @@ Capybara.configure do |config|
   config.default_selector = :css
   config.default_max_wait_time = 2
   config.ignore_hidden_elements = true
-  config.default_host = "http://www.example.com"
+  config.default_host = 'http://www.example.com'
   config.automatic_reload = true
   config.match = :smart
   config.exact = false
+  config.exact_text = false
   config.raise_server_errors = true
-  config.server_errors = [StandardError]
+  config.server_errors = [Exception]
   config.visible_text_only = false
-  config.wait_on_first_by_default = false
+  config.automatic_label_click = false
+  config.enable_aria_label = false
+  config.enable_aria_role = false
   config.reuse_server = true
+  config.default_set_options = {}
+  config.test_id = nil
+  config.predicates_wait = true
+  config.default_normalize_ws = false
+  config.allow_gumbo = false
+  config.w3c_click_offset = false
 end
-
-Capybara.register_driver :rack_test do |app|
-  Capybara::RackTest::Driver.new(app)
-end
-
-Capybara.register_driver :selenium do |app|
-  Capybara::Selenium::Driver.new(app)
-end
-

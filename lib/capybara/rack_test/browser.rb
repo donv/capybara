@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class Capybara::RackTest::Browser
   include ::Rack::Test::Methods
 
@@ -7,6 +8,7 @@ class Capybara::RackTest::Browser
 
   def initialize(driver)
     @driver = driver
+    @current_fragment = nil
   end
 
   def app
@@ -17,61 +19,82 @@ class Capybara::RackTest::Browser
     driver.options
   end
 
-  def visit(path, attributes = {})
+  def visit(path, **attributes)
     reset_host!
     process_and_follow_redirects(:get, path, attributes)
   end
 
-  def submit(method, path, attributes)
-    path = request_path if not path or path.empty?
-    process_and_follow_redirects(method, path, attributes, {'HTTP_REFERER' => current_url})
+  def refresh
+    reset_cache!
+    request(last_request.fullpath, last_request.env)
   end
 
-  def follow(method, path, attributes = {})
-    return if path.gsub(/^#{Regexp.escape(request_path)}/, '').start_with?('#') || path.downcase.start_with?('javascript:')
-    process_and_follow_redirects(method, path, attributes, {'HTTP_REFERER' => current_url})
+  def submit(method, path, attributes)
+    path = request_path if path.nil? || path.empty?
+    uri = build_uri(path)
+    uri.query = '' if method.to_s.casecmp('get').zero?
+    process_and_follow_redirects(method, uri.to_s, attributes, 'HTTP_REFERER' => current_url)
+  end
+
+  def follow(method, path, **attributes)
+    return if fragment_or_script?(path)
+
+    process_and_follow_redirects(method, path, attributes, 'HTTP_REFERER' => current_url)
   end
 
   def process_and_follow_redirects(method, path, attributes = {}, env = {})
+    @current_fragment = build_uri(path).fragment
     process(method, path, attributes, env)
-    if driver.follow_redirects?
-      driver.redirect_limit.times do
-        process(:get, last_response["Location"], {}, env) if last_response.redirect?
+
+    return unless driver.follow_redirects?
+
+    driver.redirect_limit.times do
+      if last_response.redirect?
+        if [307, 308].include? last_response.status
+          process(last_request.request_method, last_response['Location'], last_request.params, env)
+        else
+          process(:get, last_response['Location'], {}, env)
+        end
       end
-      raise Capybara::InfiniteRedirectError, "redirected more than #{driver.redirect_limit} times, check for infinite redirects." if last_response.redirect?
+    end
+
+    if last_response.redirect? # rubocop:disable Style/GuardClause
+      raise Capybara::InfiniteRedirectError, "redirected more than #{driver.redirect_limit} times, check for infinite redirects."
     end
   end
 
   def process(method, path, attributes = {}, env = {})
-    new_uri = URI.parse(path)
-    method.downcase! unless method.is_a? Symbol
-
-    new_uri.path = request_path if path.start_with?("?")
-    new_uri.path = "/" if new_uri.path.empty?
-    new_uri.path = request_path.sub(%r(/[^/]*$), '/') + new_uri.path unless new_uri.path.start_with?('/')
-    new_uri.scheme ||= @current_scheme
-    new_uri.host ||= @current_host
-    new_uri.port ||= @current_port unless new_uri.default_port == @current_port
-
-    @current_scheme = new_uri.scheme
-    @current_host = new_uri.host
-    @current_port = new_uri.port
-
+    method = method.downcase
+    new_uri = build_uri(path)
+    @current_scheme, @current_host, @current_port = new_uri.select(:scheme, :host, :port)
+    @current_fragment = new_uri.fragment || @current_fragment
     reset_cache!
     send(method, new_uri.to_s, attributes, env.merge(options[:headers] || {}))
   end
 
+  def build_uri(path)
+    URI.parse(path).tap do |uri|
+      uri.path = request_path if path.empty? || path.start_with?('?')
+      uri.path = '/' if uri.path.empty?
+      uri.path = request_path.sub(%r{/[^/]*$}, '/') + uri.path unless uri.path.start_with?('/')
+
+      uri.scheme ||= @current_scheme
+      uri.host ||= @current_host
+      uri.port ||= @current_port unless uri.default_port == @current_port
+    end
+  end
+
   def current_url
-    last_request.url
+    uri = build_uri(last_request.url)
+    uri.fragment = @current_fragment if @current_fragment
+    uri.to_s
   rescue Rack::Test::Error
-    ""
+    ''
   end
 
   def reset_host!
-    uri = URI.parse(Capybara.app_host || Capybara.default_host)
-    @current_scheme = uri.scheme
-    @current_host = uri.host
-    @current_port = uri.port
+    uri = URI.parse(driver.session_options.app_host || driver.session_options.default_host)
+    @current_scheme, @current_host, @current_port = uri.select(:scheme, :host, :port)
   end
 
   def reset_cache!
@@ -83,7 +106,7 @@ class Capybara::RackTest::Browser
   end
 
   def find(format, selector)
-    if format==:css
+    if format == :css
       dom.css(selector, Capybara::RackTest::CSSHandlers.new)
     else
       dom.xpath(selector)
@@ -93,16 +116,11 @@ class Capybara::RackTest::Browser
   def html
     last_response.body
   rescue Rack::Test::Error
-    ""
+    ''
   end
 
   def title
-    if dom.respond_to? :title
-      dom.title
-    else
-      #old versions of nokogiri don't have #title - remove in 3.0
-      dom.xpath('/html/head/title | /html/title').first.text
-    end
+    dom.title
   end
 
 protected
@@ -115,6 +133,12 @@ protected
   def request_path
     last_request.path
   rescue Rack::Test::Error
-    "/"
+    '/'
+  end
+
+private
+
+  def fragment_or_script?(path)
+    path.gsub(/^#{Regexp.escape(request_path)}/, '').start_with?('#') || path.downcase.start_with?('javascript:')
   end
 end

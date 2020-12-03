@@ -1,12 +1,14 @@
 # frozen_string_literal: true
+
 module Capybara
   module Driver
     class Node
-      attr_reader :driver, :native
+      attr_reader :driver, :native, :initial_cache
 
-      def initialize(driver, native)
+      def initialize(driver, native, initial_cache = {})
         @driver = driver
         @native = native
+        @initial_cache = initial_cache
       end
 
       def all_text
@@ -25,9 +27,13 @@ module Capybara
         raise NotImplementedError
       end
 
-      # @param value String or Array. Array is only allowed if node has 'multiple' attribute
-      # @param options [Hash{}] Driver specific options for how to set a value on a node
-      def set(value, options={})
+      def style(styles)
+        raise NotImplementedError
+      end
+
+      # @param value [String, Array] Array is only allowed if node has 'multiple' attribute
+      # @param options [Hash] Driver specific options for how to set a value on a node
+      def set(value, **options)
         raise NotImplementedError
       end
 
@@ -39,15 +45,15 @@ module Capybara
         raise NotImplementedError
       end
 
-      def click
+      def click(keys = [], **options)
         raise NotImplementedError
       end
 
-      def right_click
+      def right_click(keys = [], **options)
         raise NotImplementedError
       end
 
-      def double_click
+      def double_click(keys = [], **options)
         raise NotImplementedError
       end
 
@@ -59,7 +65,19 @@ module Capybara
         raise NotImplementedError
       end
 
-      def drag_to(element)
+      def drag_to(element, **options)
+        raise NotImplementedError
+      end
+
+      def drop(*args)
+        raise NotImplementedError
+      end
+
+      def scroll_by(x, y)
+        raise NotImplementedError
+      end
+
+      def scroll_to(element, alignment, position = nil)
         raise NotImplementedError
       end
 
@@ -68,6 +86,10 @@ module Capybara
       end
 
       def visible?
+        raise NotImplementedError
+      end
+
+      def obscured?
         raise NotImplementedError
       end
 
@@ -89,6 +111,10 @@ module Capybara
 
       def multiple?
         !!self[:multiple]
+      end
+
+      def rect
+        raise NotSupportedByDriverError, 'Capybara::Driver::Node#rect'
       end
 
       def path

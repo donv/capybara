@@ -1,5 +1,8 @@
 # frozen_string_literal: true
+
 class Capybara::Driver::Base
+  attr_writer :session
+
   def current_url
     raise NotImplementedError
   end
@@ -8,11 +11,15 @@ class Capybara::Driver::Base
     raise NotImplementedError
   end
 
-  def find_xpath(query)
+  def refresh
     raise NotImplementedError
   end
 
-  def find_css(query)
+  def find_xpath(query, **options)
+    raise NotImplementedError
+  end
+
+  def find_css(query, **options)
     raise NotImplementedError
   end
 
@@ -28,15 +35,19 @@ class Capybara::Driver::Base
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#go_forward'
   end
 
-  def execute_script(script)
+  def execute_script(script, *args)
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#execute_script'
   end
 
-  def evaluate_script(script)
+  def evaluate_script(script, *args)
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#evaluate_script'
   end
 
-  def save_screenshot(path, options={})
+  def evaluate_async_script(script, *args)
+    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#evaluate_script_asnyc'
+  end
+
+  def save_screenshot(path, **options)
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#save_screenshot'
   end
 
@@ -48,12 +59,26 @@ class Capybara::Driver::Base
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#status_code'
   end
 
+  def send_keys(*)
+    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#send_keys'
+  end
+
   ##
   #
   # @param frame [Capybara::Node::Element, :parent, :top]  The iframe element to switch to
   #
   def switch_to_frame(frame)
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#switch_to_frame'
+  end
+
+  def frame_title
+    find_xpath('/html/head/title').map(&:all_text).first.to_s
+  end
+
+  def frame_url
+    evaluate_script('document.location.href')
+  rescue Capybara::NotSupportedByDriverError
+    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#frame_title'
   end
 
   def current_window_handle
@@ -69,7 +94,11 @@ class Capybara::Driver::Base
   end
 
   def maximize_window(handle)
-    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#maximize_current_window'
+    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#maximize_window'
+  end
+
+  def fullscreen_window(handle)
+    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#fullscreen_window'
   end
 
   def close_window(handle)
@@ -88,14 +117,9 @@ class Capybara::Driver::Base
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#switch_to_window'
   end
 
-  def within_window(locator)
-    raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#within_window'
-  end
-
   def no_such_window_error
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#no_such_window_error'
   end
-
 
   ##
   #
@@ -107,7 +131,7 @@ class Capybara::Driver::Base
   # @return [String]  the message shown in the modal
   # @raise [Capybara::ModalNotFound]  if modal dialog hasn't been found
   #
-  def accept_modal(type, options={}, &blk)
+  def accept_modal(type, **options, &blk)
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#accept_modal'
   end
 
@@ -120,7 +144,7 @@ class Capybara::Driver::Base
   # @return [String]  the message shown in the modal
   # @raise [Capybara::ModalNotFound]  if modal dialog hasn't been found
   #
-  def dismiss_modal(type, options={}, &blk)
+  def dismiss_modal(type, **options, &blk)
     raise Capybara::NotSupportedByDriverError, 'Capybara::Driver::Base#dismiss_modal'
   end
 
@@ -132,16 +156,19 @@ class Capybara::Driver::Base
     false
   end
 
-  def reset!
-  end
+  def reset!; end
 
   def needs_server?
     false
   end
 
-  # @deprecated This method is being removed
-  def browser_initialized?
-    warn "DEPRECATED: #browser_initialized? is deprecated and will be removed in the next version of Capybara"
-    true
+  def session_options
+    session&.config || Capybara.session_options
+  end
+
+private
+
+  def session
+    @session ||= nil
   end
 end

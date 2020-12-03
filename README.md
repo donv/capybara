@@ -1,14 +1,25 @@
 # Capybara
 
-[![Build Status](https://secure.travis-ci.org/jnicklas/capybara.svg)](https://travis-ci.org/jnicklas/capybara)
-[![Dependency Status](https://gemnasium.com/jnicklas/capybara.svg)](https://gemnasium.com/jnicklas/capybara)
-[![Code Climate](https://codeclimate.com/github/jnicklas/capybara.svg)](https://codeclimate.com/github/jnicklas/capybara)
+[![Build Status](https://secure.travis-ci.org/teamcapybara/capybara.svg)](https://travis-ci.org/teamcapybara/capybara)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/teamcapybara/capybara?svg=true)](https://ci.appveyor.com/api/projects/github/teamcapybara/capybara)
+[![Code Climate](https://codeclimate.com/github/teamcapybara/capybara.svg)](https://codeclimate.com/github/teamcapybara/capybara)
+[![Coverage Status](https://coveralls.io/repos/github/teamcapybara/capybara/badge.svg?branch=master)](https://coveralls.io/github/teamcapybara/capybara?branch=master)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jnicklas/capybara?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![SemVer](https://api.dependabot.com/badges/compatibility_score?dependency-name=capybara&package-manager=bundler&version-scheme=semver)](https://dependabot.com/compatibility-score.html?dependency-name=capybara&package-manager=bundler&version-scheme=semver)
+
+**Note** You are viewing the README for the development version of Capybara. If you are using the current release version
+you can find the README at https://github.com/teamcapybara/capybara/blob/3.34_stable/README.md
 
 Capybara helps you test web applications by simulating how a real user would
 interact with your app. It is agnostic about the driver running your tests and
 comes with Rack::Test and Selenium support built in. WebKit is supported
 through an external gem.
+
+## Support Capybara
+
+If you and/or your company find value in Capybara and would like to contribute financially to its ongoing maintenance and development, please visit
+<a href="https://www.patreon.com/capybara">Patreon</a>
+
 
 **Need help?** Ask on the mailing list (please do not open an issue on
 GitHub): http://groups.google.com/group/ruby-capybara
@@ -20,13 +31,13 @@ GitHub): http://groups.google.com/group/ruby-capybara
 - [Using Capybara with Cucumber](#using-capybara-with-cucumber)
 - [Using Capybara with RSpec](#using-capybara-with-rspec)
 - [Using Capybara with Test::Unit](#using-capybara-with-testunit)
-- [Using Capybara with MiniTest::Spec](#using-capybara-with-minitestspec)
+- [Using Capybara with Minitest](#using-capybara-with-minitest)
+- [Using Capybara with Minitest::Spec](#using-capybara-with-minitestspec)
 - [Drivers](#drivers)
     - [Selecting the Driver](#selecting-the-driver)
     - [RackTest](#racktest)
     - [Selenium](#selenium)
-    - [Capybara-webkit](#capybara-webkit)
-    - [Poltergeist](#poltergeist)
+    - [Apparition](#apparition)
 - [The DSL](#the-dsl)
     - [Navigating](#navigating)
     - [Clicking links and buttons](#clicking-links-and-buttons)
@@ -46,10 +57,13 @@ GitHub): http://groups.google.com/group/ruby-capybara
 - [Using the DSL elsewhere](#using-the-dsl-elsewhere)
 - [Calling remote servers](#calling-remote-servers)
 - [Using sessions](#using-sessions)
+    - [Named sessions](#named-sessions)
+    - [Using sessions manually](#using-sessions-manually)
 - [XPath, CSS and selectors](#xpath-css-and-selectors)
 - [Beware the XPath // trap](#beware-the-xpath--trap)
 - [Configuring and adding drivers](#configuring-and-adding-drivers)
 - [Gotchas:](#gotchas)
+- ["Threadsafe" mode](#threadsafe-mode)
 - [Development](#development)
 
 ## <a name="key-benefits"></a>Key benefits
@@ -63,23 +77,18 @@ GitHub): http://groups.google.com/group/ruby-capybara
 
 ## <a name="setup"></a>Setup
 
-Capybara requires Ruby 1.9.3 or later. To install, add this line to your
+Capybara requires Ruby 2.5.0 or later. To install, add this line to your
 `Gemfile` and run `bundle install`:
 
 ```ruby
 gem 'capybara'
 ```
 
-**Note:** If using Ruby < 2.0 you will also need to limit the version of mime-types to < 3.0 and the version of rack to < 2.0
-
 If the application that you are testing is a Rails app, add this line to your test helper file:
 
 ```ruby
 require 'capybara/rails'
 ```
-
-**Note:** In Rails 4.0/4.1 the default test environment (`config/environments/test.rb`) is [not threadsafe](https://github.com/rails/rails/issues/15089).
-If you experience random errors about missing constants, add `config.allow_concurrency = false` to `config/environments/test.rb`.
 
 If the application that you are testing is a Rack app, but not Rails, set Capybara.app to your Rack app:
 
@@ -88,7 +97,13 @@ Capybara.app = MyRackApp
 ```
 
 If you need to test JavaScript, or if your app interacts with (or is located at)
-a remote URL, you'll need to [use a different driver](#drivers).
+a remote URL, you'll need to [use a different driver](#drivers).  If using Rails 5.0+, but not using the Rails system tests from 5.1, you'll probably also
+want to swap the "server" used to launch your app to Puma in order to match Rails defaults.
+
+```ruby
+Capybara.server = :puma # Until your setup is working
+Capybara.server = :puma, { Silent: true } # To clean up your test output
+```
 
 ## <a name="using-capybara-with-cucumber"></a>Using Capybara with Cucumber
 
@@ -105,8 +120,8 @@ You can use the Capybara DSL in your steps, like so:
 ```ruby
 When /I sign in/ do
   within("#session") do
-    fill_in 'Email', :with => 'user@example.com'
-    fill_in 'Password', :with => 'password'
+    fill_in 'Email', with: 'user@example.com'
+    fill_in 'Password', with: 'password'
   end
   click_button 'Sign in'
 end
@@ -122,40 +137,39 @@ Scenario: do something Ajaxy
   ...
 ```
 
-There are also explicit `@selenium` and `@rack_test`
-tags set up for you.
+There are also explicit tags for each registered driver set up for you (`@selenium`, `@rack_test`, etc).
 
 ## <a name="using-capybara-with-rspec"></a>Using Capybara with RSpec
 
-Load RSpec 2.x support by adding the following line (typically to your
+Load RSpec 3.5+ support by adding the following line (typically to your
 `spec_helper.rb` file):
 
 ```ruby
 require 'capybara/rspec'
 ```
 
-If you are using Rails, put your Capybara specs in `spec/features` (only works
+If you are using Rails, put your Capybara specs in `spec/features` or `spec/system` (only works
 if [you have it configured in
-RSpec](https://www.relishapp.com/rspec/rspec-rails/docs/upgrade#file-type-inference-disabled))
+RSpec](https://relishapp.com/rspec/rspec-rails/v/4-0/docs/directory-structure))
 and if you have your Capybara specs in a different directory, then tag the
-example groups with `:type => :feature`.
+example groups with `type: :feature` or `type: :system` depending on which type of test you're writing.
 
 If you are not using Rails, tag all the example groups in which you want to use
-Capybara with `:type => :feature`.
+Capybara with `type: :feature`.
 
 You can now write your specs like so:
 
 ```ruby
-describe "the signin process", :type => :feature do
+describe "the signin process", type: :feature do
   before :each do
-    User.make(:email => 'user@example.com', :password => 'password')
+    User.make(email: 'user@example.com', password: 'password')
   end
 
   it "signs me in" do
     visit '/sessions/new'
     within("#session") do
-      fill_in 'Email', :with => 'user@example.com'
-      fill_in 'Password', :with => 'password'
+      fill_in 'Email', with: 'user@example.com'
+      fill_in 'Password', with: 'password'
     end
     click_button 'Sign in'
     expect(page).to have_content 'Success'
@@ -163,14 +177,14 @@ describe "the signin process", :type => :feature do
 end
 ```
 
-Use `:js => true` to switch to the `Capybara.javascript_driver`
+Use `js: true` to switch to the `Capybara.javascript_driver`
 (`:selenium` by default), or provide a `:driver` option to switch
 to one specific driver. For example:
 
 ```ruby
-describe 'some stuff which requires js', :js => true do
+describe 'some stuff which requires js', js: true do
   it 'will use the default js driver'
-  it 'will switch to one specific driver', :driver => :webkit
+  it 'will switch to one specific driver', driver: :apparition
 end
 ```
 
@@ -179,26 +193,26 @@ Capybara also comes with a built in DSL for creating descriptive acceptance test
 ```ruby
 feature "Signing in" do
   background do
-    User.make(:email => 'user@example.com', :password => 'caplin')
+    User.make(email: 'user@example.com', password: 'caplin')
   end
 
   scenario "Signing in with correct credentials" do
     visit '/sessions/new'
     within("#session") do
-      fill_in 'Email', :with => 'user@example.com'
-      fill_in 'Password', :with => 'caplin'
+      fill_in 'Email', with: 'user@example.com'
+      fill_in 'Password', with: 'caplin'
     end
     click_button 'Sign in'
     expect(page).to have_content 'Success'
   end
 
-  given(:other_user) { User.make(:email => 'other@example.com', :password => 'rous') }
+  given(:other_user) { User.make(email: 'other@example.com', password: 'rous') }
 
   scenario "Signing in as another user" do
     visit '/sessions/new'
     within("#session") do
-      fill_in 'Email', :with => other_user.email
-      fill_in 'Password', :with => other_user.password
+      fill_in 'Email', with: other_user.email
+      fill_in 'Password', with: other_user.password
     end
     click_button 'Sign in'
     expect(page).to have_content 'Invalid email or password'
@@ -206,11 +220,11 @@ feature "Signing in" do
 end
 ```
 
-`feature` is in fact just an alias for `describe ..., :type => :feature`,
+`feature` is in fact just an alias for `describe ..., type: :feature`,
 `background` is an alias for `before`, `scenario` for `it`, and
 `given`/`given!` aliases for `let`/`let!`, respectively.
 
-Finally, Capybara matchers are supported in view specs:
+Finally, Capybara matchers are also supported in view specs:
 
 ```ruby
 RSpec.describe "todos/show.html.erb", type: :view do
@@ -224,20 +238,45 @@ RSpec.describe "todos/show.html.erb", type: :view do
 end
 ```
 
+**Note: When you require 'capybara/rspec' proxy methods are installed to work around name collisions between Capybara::DSL methods
+  `all`/`within` and the identically named built-in RSpec matchers. If you opt not to require 'capybara/rspec' you can install the proxy methods by requiring 'capybara/rspec/matcher_proxies' after requiring RSpec and 'capybara/dsl'**
+
 ## <a name="using-capybara-with-testunit"></a>Using Capybara with Test::Unit
 
-* If you are using Rails, add the following code in your `test_helper.rb`
+* If you are using `Test::Unit`, define a base class for your Capybara tests
+  like so:
+
+    ```ruby
+    require 'capybara/dsl'
+
+    class CapybaraTestCase < Test::Unit::TestCase
+      include Capybara::DSL
+
+      def teardown
+        Capybara.reset_sessions!
+        Capybara.use_default_driver
+      end
+    end
+    ```
+
+## <a name="using-capybara-with-minitest"></a>Using Capybara with Minitest
+
+* If you are using Rails, but not using Rails system tests, add the following code in your `test_helper.rb`
     file to make Capybara available in all test cases deriving from
     `ActionDispatch::IntegrationTest`:
 
     ```ruby
+    require 'capybara/rails'
+    require 'capybara/minitest'
+
     class ActionDispatch::IntegrationTest
       # Make the Capybara DSL available in all integration tests
       include Capybara::DSL
+      # Make `assert_*` methods behave like Minitest assertions
+      include Capybara::Minitest::Assertions
 
       # Reset sessions and driver between tests
-      # Use super wherever this method is redefined in your individual test classes
-      def teardown
+      teardown do
         Capybara.reset_sessions!
         Capybara.use_default_driver
       end
@@ -248,8 +287,11 @@ end
   so:
 
     ```ruby
-    class CapybaraTestCase < Test::Unit::TestCase
+    require 'capybara/minitest'
+
+    class CapybaraTestCase < Minitest::Test
       include Capybara::DSL
+      include Capybara::Minitest::Assertions
 
       def teardown
         Capybara.reset_sessions!
@@ -275,14 +317,9 @@ class BlogTest < ActionDispatch::IntegrationTest
 end
 ```
 
-## <a name="using-capybara-with-minitestspec"></a>Using Capybara with MiniTest::Spec
+## <a name="using-capybara-with-minitestspec"></a>Using Capybara with Minitest::Spec
 
-Set up your base class as with Test::Unit. (On Rails, the right base class
-could be something other than ActionDispatch::IntegrationTest.)
-
-The capybara_minitest_spec gem ([GitHub](https://github.com/ordinaryzelig/capybara_minitest_spec),
-[rubygems.org](https://rubygems.org/gems/capybara_minitest_spec)) provides MiniTest::Spec
-expectations for Capybara. For example:
+Follow the above instructions for Minitest and additionally require capybara/minitest/spec
 
 ```ruby
 page.must_have_content('Important!')
@@ -301,12 +338,12 @@ these limitations, you can set up a different default driver for your features.
 For example if you'd prefer to run everything in Selenium, you could do:
 
 ```ruby
-Capybara.default_driver = :selenium
+Capybara.default_driver = :selenium # :selenium_chrome and :selenium_chrome_headless are also registered
 ```
 
-However, if you are using RSpec or Cucumber, you may instead want to consider
-leaving the faster `:rack_test` as the __default_driver__, and marking only those
-tests that require a JavaScript-capable driver using `:js => true` or
+However, if you are using RSpec or Cucumber (and your app runs correctly without JS),
+you may instead want to consider leaving the faster `:rack_test` as the __default_driver__, and
+marking only those tests that require a JavaScript-capable driver using `js: true` or
 `@javascript`, respectively.  By default, JavaScript tests are run using the
 `:selenium` driver. You can change this by setting
 `Capybara.javascript_driver`.
@@ -315,7 +352,7 @@ You can also change the driver temporarily (typically in the Before/setup and
 After/teardown blocks):
 
 ```ruby
-Capybara.current_driver = :webkit # temporarily select different driver
+Capybara.current_driver = :apparition # temporarily select different driver
 # tests here
 Capybara.use_default_driver       # switch back to default driver
 ```
@@ -342,7 +379,7 @@ RackTest can be configured with a set of headers like this:
 
 ```ruby
 Capybara.register_driver :rack_test do |app|
-  Capybara::RackTest::Driver.new(app, :headers => { 'HTTP_USER_AGENT' => 'Capybara' })
+  Capybara::RackTest::Driver.new(app, headers: { 'HTTP_USER_AGENT' => 'Capybara' })
 end
 ```
 
@@ -350,47 +387,40 @@ See the section on adding and configuring drivers.
 
 ### <a name="selenium"></a>Selenium
 
-At the moment, Capybara supports [Selenium 2.0
-(Webdriver)](http://seleniumhq.org/docs/01_introducing_selenium.html#selenium-2-aka-selenium-webdriver),
-*not* Selenium RC. In order to use Selenium, you'll need to install the
-`selenium-webdriver` gem, and add it to your Gemfile if you're using bundler.
-Provided Firefox is installed, everything is set up for you, and you should be
-able to start using Selenium right away.
+Capybara supports [Selenium 3.5+
+(Webdriver)](https://www.seleniumhq.org/projects/webdriver/).
+In order to use Selenium, you'll need to install the `selenium-webdriver` gem,
+and add it to your Gemfile if you're using bundler.
+
+Capybara pre-registers a number of named drivers that use Selenium - they are:
+
+  * :selenium                 => Selenium driving Firefox
+  * :selenium_headless        => Selenium driving Firefox in a headless configuration
+  * :selenium_chrome          => Selenium driving Chrome
+  * :selenium_chrome_headless => Selenium driving Chrome in a headless configuration
+
+These should work (with relevant software installation) in a local desktop configuration but you may
+need to customize them if using in a CI environment where additional options may need to be passed
+to the browsers.  See the section on adding and configuring drivers.
+
 
 **Note**: drivers which run the server in a different thread may not share the
 same transaction as your tests, causing data not to be shared between your test
-and test server, see "Transactions and database setup" below.
+and test server, see [Transactions and database setup](#transactions-and-database-setup) below.
 
-### <a name="capybara-webkit"></a>Capybara-webkit
+### <a name="apparition"></a>Apparition
 
-The [capybara-webkit driver](https://github.com/thoughtbot/capybara-webkit) is for true headless
-testing. It uses QtWebKit to start a rendering engine process. It can execute JavaScript as well.
-It is significantly faster than drivers like Selenium since it does not load an entire browser.
-
-You can install it with:
-
-```bash
-gem install capybara-webkit
-```
-
-And you can use it by:
-
-```ruby
-Capybara.javascript_driver = :webkit
-```
-
-### <a name="poltergeist"></a>Poltergeist
-
-[Poltergeist](https://github.com/teampoltergeist/poltergeist) is another
-headless driver which integrates Capybara with
-[PhantomJS](http://phantomjs.org/). It is truly headless, so doesn't
-require Xvfb to run on your CI server. It will also detect and report
-any Javascript errors that happen within the page.
+The [apparition driver](https://github.com/twalpole/apparition) is a new driver that allows you to run tests using Chrome in a headless
+or headed configuration. It attempts to provide backwards compatibility with the [Poltergeist driver API](https://github.com/teampoltergeist/poltergeist)
+and [capybara-webkit API](https://github.com/thoughtbot/capybara-webkit) while allowing for the use of modern JS/CSS. It
+uses CDP to communicate with Chrome, thereby obviating the need for chromedriver. This driver is being developed by the
+current developer of Capybara and will attempt to keep up to date with new Capybara releases. It will probably be moved into the
+teamcapybara repo once it reaches v1.0.
 
 ## <a name="the-dsl"></a>The DSL
 
 *A complete reference is available at
-[rubydoc.info](http://rubydoc.info/github/jnicklas/capybara/master)*.
+[rubydoc.info](http://rubydoc.info/github/teamcapybara/capybara/master)*.
 
 **Note: By default Capybara will only locate visible elements. This is because
  a real user would not be able to interact with non-visible elements.**
@@ -401,7 +431,7 @@ Capybara heavily uses XPath, which doesn't support case insensitivity.
 ### <a name="navigating"></a>Navigating
 
 You can use the
-<tt>[visit](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Session#visit-instance_method)</tt>
+<tt>[visit](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Session#visit-instance_method)</tt>
 method to navigate to other pages:
 
 ```ruby
@@ -412,8 +442,8 @@ visit(post_comments_path(post))
 The visit method only takes a single parameter, the request method is **always**
 GET.
 
-You can get the [current path](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Session#current_path-instance_method)
-of the browsing session, and test it using the [`have_current_path`](http://www.rubydoc.info/github/jnicklas/capybara/master/Capybara/RSpecMatchers#have_current_path-instance_method) matcher:
+You can get the [current path](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Session#current_path-instance_method)
+of the browsing session, and test it using the [`have_current_path`](http://www.rubydoc.info/github/teamcapybara/capybara/master/Capybara/RSpecMatchers#have_current_path-instance_method) matcher:
 
 ```ruby
 expect(page).to have_current_path(post_comments_path(post))
@@ -426,7 +456,7 @@ to ensure that preceding actions (such as a `click_link`) have completed.
 
 ### <a name="clicking-links-and-buttons"></a>Clicking links and buttons
 
-*Full reference: [Capybara::Node::Actions](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Node/Actions)*
+*Full reference: [Capybara::Node::Actions](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Node/Actions)*
 
 You can interact with the webapp by following links and buttons. Capybara
 automatically follows any redirects, and submits forms associated with buttons.
@@ -441,33 +471,33 @@ click_on('Button Value')
 
 ### <a name="interacting-with-forms"></a>Interacting with forms
 
-*Full reference: [Capybara::Node::Actions](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Node/Actions)*
+*Full reference: [Capybara::Node::Actions](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Node/Actions)*
 
 There are a number of tools for interacting with form elements:
 
 ```ruby
-fill_in('First Name', :with => 'John')
-fill_in('Password', :with => 'Seekrit')
-fill_in('Description', :with => 'Really Long Text...')
+fill_in('First Name', with: 'John')
+fill_in('Password', with: 'Seekrit')
+fill_in('Description', with: 'Really Long Text...')
 choose('A Radio Button')
 check('A Checkbox')
 uncheck('A Checkbox')
 attach_file('Image', '/path/to/image.jpg')
-select('Option', :from => 'Select Box')
+select('Option', from: 'Select Box')
 ```
 
 ### <a name="querying"></a>Querying
 
-*Full reference: [Capybara::Node::Matchers](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Node/Matchers)*
+*Full reference: [Capybara::Node::Matchers](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Node/Matchers)*
 
 Capybara has a rich set of options for querying the page for the existence of
 certain elements, and working with and manipulating those elements.
 
 ```ruby
 page.has_selector?('table tr')
-page.has_selector?(:xpath, '//table/tr')
+page.has_selector?(:xpath, './/table/tr')
 
-page.has_xpath?('//table/tr')
+page.has_xpath?('.//table/tr')
 page.has_css?('table tr.foo')
 page.has_content?('foo')
 ```
@@ -479,27 +509,39 @@ You can use these with RSpec's magic matchers:
 
 ```ruby
 expect(page).to have_selector('table tr')
-expect(page).to have_selector(:xpath, '//table/tr')
+expect(page).to have_selector(:xpath, './/table/tr')
 
-expect(page).to have_xpath('//table/tr')
+expect(page).to have_xpath('.//table/tr')
 expect(page).to have_css('table tr.foo')
 expect(page).to have_content('foo')
 ```
 
 ### <a name="finding"></a>Finding
 
-_Full reference: [Capybara::Node::Finders](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Node/Finders)_
+_Full reference: [Capybara::Node::Finders](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Node/Finders)_
 
 You can also find specific elements, in order to manipulate them:
 
 ```ruby
 find_field('First Name').value
+find_field(id: 'my_field').value
 find_link('Hello', :visible => :all).visible?
-find_button('Send').click
+find_link(class: ['some_class', 'some_other_class'], :visible => :all).visible?
 
-find(:xpath, "//table/tr").click
+find_button('Send').click
+find_button(value: '1234').click
+
+find(:xpath, ".//table/tr").click
 find("#overlay").find("h1").click
 all('a').each { |a| a[:href] }
+```
+
+If you need to find elements by additional attributes/properties you can also pass a filter block, which will be checked inside the normal waiting behavior.
+If you find yourself needing to use this a lot you may be better off adding a [custom selector](http://www.rubydoc.info/github/teamcapybara/capybara/Capybara#add_selector-class_method) or [adding a filter to an existing selector](http://www.rubydoc.info/github/teamcapybara/capybara/Capybara#modify_selector-class_method).
+
+```ruby
+find_field('First Name'){ |el| el['data-xyz'] == '123' }
+find("#img_loading"){ |img| img['complete'] == true }
 ```
 
 **Note**: `find` will wait for an element to appear on the page, as explained in the
@@ -518,16 +560,16 @@ expect(find('#navigation')).to have_button('Sign out')
 Capybara makes it possible to restrict certain actions, such as interacting with
 forms or clicking links and buttons, to within a specific area of the page. For
 this purpose you can use the generic
-<tt>[within](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Session#within-instance_method)</tt>
+<tt>[within](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Session#within-instance_method)</tt>
 method. Optionally you can specify which kind of selector to use.
 
 ```ruby
 within("li#employee") do
-  fill_in 'Name', :with => 'Jimmy'
+  fill_in 'Name', with: 'Jimmy'
 end
 
-within(:xpath, "//li[@id='employee']") do
-  fill_in 'Name', :with => 'Jimmy'
+within(:xpath, ".//li[@id='employee']") do
+  fill_in 'Name', with: 'Jimmy'
 end
 ```
 
@@ -537,11 +579,11 @@ specific table, identified by either id or text of the table's caption tag.
 
 ```ruby
 within_fieldset('Employee') do
-  fill_in 'Name', :with => 'Jimmy'
+  fill_in 'Name', with: 'Jimmy'
 end
 
 within_table('Employee') do
-  fill_in 'Name', :with => 'Jimmy'
+  fill_in 'Name', with: 'Jimmy'
 end
 ```
 
@@ -568,11 +610,21 @@ In drivers which support it, you can easily execute JavaScript:
 page.execute_script("$('body').empty()")
 ```
 
-For simple expressions, you can return the result of the script. Note
-that this may break with more complicated expressions:
+For simple expressions, you can return the result of the script.
 
 ```ruby
 result = page.evaluate_script('4 + 4');
+```
+
+For more complicated scripts you'll need to write them as one expression.
+
+```ruby
+result = page.evaluate_script(<<~JS, 3, element)
+  (function(n, el){
+    var val = parseInt(el.value, 10);
+    return n+val;
+  })(arguments[0], arguments[1])
+JS
 ```
 
 ### <a name="modals"></a>Modals
@@ -623,7 +675,7 @@ save_and_open_page
 ```
 
 You can also retrieve the current state of the DOM as a string using
-<tt>[page.html](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Session#html-instance_method)</tt>.
+<tt>[page.html](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Session#html-instance_method)</tt>.
 
 ```ruby
 print page.html
@@ -643,6 +695,10 @@ Or have it save and automatically open:
 ```ruby
 save_and_open_screenshot
 ```
+
+Screenshots are saved to `Capybara.save_path`, relative to the app directory.
+If you have required `capybara/rails`, `Capybara.save_path` will default to
+`tmp/capybara`.
 
 ## <a name="matching"></a>Matching
 
@@ -688,6 +744,9 @@ Capybara 2.0.x, set `Capybara.match` to `:one`. To emulate the behaviour in
 Capybara 1.x, set `Capybara.match` to `:prefer_exact`.
 
 ## <a name="transactions-and-database-setup"></a>Transactions and database setup
+
+**Note:**  Rails 5.1+ "safely" shares the database connection between the app and test threads.  Therefore,
+if using Rails 5.1+ you SHOULD be able to ignore this section.
 
 Some Capybara drivers need to run against an actual HTTP server. Capybara takes
 care of this and starts one for you in the same process as your test, but on
@@ -779,9 +838,9 @@ module MyModule
   include Capybara::DSL
 
   def login!
-    within("//form[@id='session']") do
-      fill_in 'Email', :with => 'user@example.com'
-      fill_in 'Password', :with => 'password'
+    within(:xpath, ".//form[@id='session']") do
+      fill_in 'Email', with: 'user@example.com'
+      fill_in 'Password', with: 'password'
     end
     click_button 'Sign in'
   end
@@ -838,21 +897,21 @@ To permanently switch the current session to a different session
 
 ```ruby
 Capybara.session_name = "some other session"
-````
+```
 
 ### <a name="using-sessions-manually"></a>Using sessions manually
 
 For ultimate control, you can instantiate and use a
-[Session](http://rubydoc.info/github/jnicklas/capybara/master/Capybara/Session)
+[Session](http://rubydoc.info/github/teamcapybara/capybara/master/Capybara/Session)
 manually.
 
 ```ruby
 require 'capybara'
 
 session = Capybara::Session.new(:webkit, my_rack_app)
-session.within("//form[@id='session']") do
-  session.fill_in 'Email', :with => 'user@example.com'
-  session.fill_in 'Password', :with => 'password'
+session.within("form#session") do
+  session.fill_in 'Email', with: 'user@example.com'
+  session.fill_in 'Password', with: 'password'
 end
 session.click_button 'Sign in'
 ```
@@ -864,24 +923,29 @@ and will always use CSS by default.  If you want to use XPath, you'll need to
 do:
 
 ```ruby
-within(:xpath, '//ul/li') { ... }
-find(:xpath, '//ul/li').text
-find(:xpath, '//li[contains(.//a[@href = "#"]/text(), "foo")]').value
+within(:xpath, './/ul/li') { ... }
+find(:xpath, './/ul/li').text
+find(:xpath, './/li[contains(.//a[@href = "#"]/text(), "foo")]').value
 ```
 
 Alternatively you can set the default selector to XPath:
 
 ```ruby
 Capybara.default_selector = :xpath
-find('//ul/li').text
+find('.//ul/li').text
 ```
 
-Capybara allows you to add custom selectors, which can be very useful if you
-find yourself using the same kinds of selectors very often:
+Capybara provides a number of other built-in selector types. The full list, along
+with applicable filters, can be seen at [built-in selectors](https://www.rubydoc.info/github/teamcapybara/capybara/Capybara/Selector)
+
+Capybara also allows you to add custom selectors, which can be very useful if you
+find yourself using the same kinds of selectors very often. The examples below are very
+simple, and there are many available features not demonstrated. For more in-depth examples
+please see Capybaras built-in selector definitions.
 
 ```ruby
-Capybara.add_selector(:id) do
-  xpath { |id| XPath.descendant[XPath.attr(:id) == id.to_s] }
+Capybara.add_selector(:my_attribute) do
+  xpath { |id| XPath.descendant[XPath.attr(:my_attribute) == id.to_s] }
 end
 
 Capybara.add_selector(:row) do
@@ -898,9 +962,9 @@ an XPath expression generated through the XPath gem. You can now use these
 selectors like this:
 
 ```ruby
-find(:id, 'post_123')
-find(:row, 3)
-find(:flash_type, :notice)
+find(:my_attribute, 'post_123') # find element with matching attribute
+find(:row, 3) # find 3rd row in table body
+find(:flash_type, :notice) # find element with id of 'flash' and class of 'notice'
 ```
 
 ## <a name="beware-the-xpath--trap"></a>Beware the XPath // trap
@@ -946,6 +1010,7 @@ end
 However, it's also possible to give this configuration a different name.
 
 ```ruby
+# Note: Capybara registers this by default
 Capybara.register_driver :selenium_chrome do |app|
   Capybara::Selenium::Driver.new(app, :browser => :chrome)
 end
@@ -991,15 +1056,52 @@ additional info about how the underlying driver can be configured.
   are testing for specific server errors and using multiple sessions make sure to test for the
   errors using the initial session (usually :default)
 
+* If WebMock is enabled, you may encounter a "Too many open files"
+  error. A simple `page.find` call may cause thousands of HTTP requests
+  until the timeout occurs. By default, WebMock will cause each of these
+  requests to spawn a new connection. To work around this problem, you
+  may need to [enable WebMock's `net_http_connect_on_start: true`
+  parameter](https://github.com/bblimke/webmock/blob/master/README.md#connecting-on-nethttpstart).
+
+## <a name="threadsafe"></a>"Threadsafe" mode
+
+In normal mode most of Capybara's configuration options are global settings which can cause issues
+if using multiple sessions and wanting to change a setting for only one of the sessions.  To provide
+support for this type of usage Capybara now provides a "threadsafe" mode which can be enabled by setting
+
+```ruby
+Capybara.threadsafe = true
+```
+
+This setting can only be changed before any sessions have been created.  In "threadsafe" mode the following
+behaviors of Capybara change
+
+* Most options can now be set on a session.  These can either be set at session creation time or after, and
+  default to the global options at the time of session creation.  Options which are NOT session specific are
+  `app`, `reuse_server`, `default_driver`, `javascript_driver`, and (obviously) `threadsafe`.  Any drivers and servers
+  registered through `register_driver` and `register_server` are also global.
+
+  ```ruby
+  my_session = Capybara::Session.new(:driver, some_app) do |config|
+    config.automatic_label_click = true # only set for my_session
+  end
+  my_session.config.default_max_wait_time = 10 # only set for my_session
+  Capybara.default_max_wait_time = 2 # will not change the default_max_wait in my_session
+  ```
+
+* `current_driver` and `session_name` are thread specific.  This means that `using_session` and
+  `using_driver` also only affect the current thread.
+
 ## <a name="development"></a>Development
 
 To set up a development environment, simply do:
 
 ```bash
 bundle install
-bundle exec rake  # run the test suite
+bundle exec rake  # run the test suite with Firefox - requires `geckodriver` to be installed
+bundle exec rake spec_chrome # run the test suite with Chrome - require `chromedriver` to be installed
 ```
 
 See
-[CONTRIBUTING.md](https://github.com/jnicklas/capybara/blob/master/CONTRIBUTING.md)
+[CONTRIBUTING.md](https://github.com/teamcapybara/capybara/blob/master/CONTRIBUTING.md)
 for how to send issues and pull requests.

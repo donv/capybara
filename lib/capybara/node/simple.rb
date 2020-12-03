@@ -1,7 +1,7 @@
 # frozen_string_literal: true
+
 module Capybara
   module Node
-
     ##
     #
     # A {Capybara::Node::Simple} is a simpler version of {Capybara::Node::Base} which
@@ -28,8 +28,9 @@ module Capybara
       #
       # @return [String]    The text of the element
       #
-      def text(type=nil)
-        native.text
+      def text(_type = nil, normalize_ws: false)
+        txt = native.text
+        normalize_ws ? txt.gsub(/[[:space:]]+/, ' ').strip : txt
       end
 
       ##
@@ -45,7 +46,7 @@ module Capybara
         attr_name = name.to_s
         if attr_name == 'value'
           value
-        elsif 'input' == tag_name and 'checkbox' == native[:type] and 'checked' == attr_name
+        elsif (tag_name == 'input') && (native[:type] == 'checkbox') && (attr_name == 'checked')
           native['checked'] == 'checked'
         else
           native[attr_name]
@@ -76,15 +77,15 @@ module Capybara
       #
       def value
         if tag_name == 'textarea'
-          native.content
+          native['_capybara_raw_value']
         elsif tag_name == 'select'
-          if native['multiple'] == 'multiple'
-            native.xpath(".//option[@selected='selected']").map { |option| option[:value] || option.content  }
+          selected_options = find_xpath('.//option[@selected]')
+          if multiple?
+            selected_options.map(&method(:option_value))
           else
-            option = native.xpath(".//option[@selected='selected']").first || native.xpath(".//option").first
-            option[:value] || option.content if option
+            option_value(selected_options.first || find_xpath('.//option').first)
           end
-        elsif tag_name == 'input' && %w(radio checkbox).include?(native[:type])
+        elsif tag_name == 'input' && %w[radio checkbox].include?(native[:type])
           native[:value] || 'on'
         else
           native[:value]
@@ -99,15 +100,17 @@ module Capybara
       # @param  [Boolean] check_ancestors  Whether to inherit visibility from ancestors
       # @return [Boolean]     Whether the element is visible
       #
-      def visible?(check_ancestors = true)
-        return false if (tag_name == 'input') && (native[:type]=="hidden")
+      def visible?(check_ancestors = true) # rubocop:disable Style/OptionalBooleanParameter
+        return false if (tag_name == 'input') && (native[:type] == 'hidden')
+        return false if tag_name == 'template'
 
         if check_ancestors
-          #check size because oldest supported nokogiri doesnt support xpath boolean() function
-          native.xpath("./ancestor-or-self::*[contains(@style, 'display:none') or contains(@style, 'display: none') or @hidden or name()='script' or name()='head']").size() == 0
+          !find_xpath(VISIBILITY_XPATH)
         else
-          #no need for an xpath if only checking the current element
-          !(native.has_attribute?('hidden') || (native[:style] =~ /display:\s?none/) || %w(script head).include?(tag_name))
+          # No need for an xpath if only checking the current element
+          !(native.key?('hidden') ||
+            /display:\s?none/.match?(native[:style] || '') ||
+            %w[script head].include?(tag_name))
         end
       end
 
@@ -127,7 +130,8 @@ module Capybara
       #
       # @return [Boolean]     Whether the element is disabled
       def disabled?
-        native.has_attribute?('disabled')
+        native.has_attribute?('disabled') &&
+          %w[button input select textarea optgroup option menuitem fieldset].include?(tag_name)
       end
 
       ##
@@ -140,21 +144,27 @@ module Capybara
         native.has_attribute?('selected')
       end
 
-      def synchronize(seconds=nil)
+      def multiple?
+        native.has_attribute?('multiple')
+      end
+
+      def readonly?
+        native.has_attribute?('readonly')
+      end
+
+      def synchronize(_seconds = nil)
         yield # simple nodes don't need to wait
       end
 
-      def allow_reload!
+      def allow_reload!(*)
         # no op
       end
 
+      ##
+      #
+      # @return [String]     The title of the document
       def title
-        if native.respond_to? :title
-          native.title
-        else
-          #old versions of nokogiri don't have #title - remove in 3.0
-          native.xpath('/html/head/title | /html/title').first.text
-        end
+        native.title
       end
 
       def inspect
@@ -162,14 +172,41 @@ module Capybara
       end
 
       # @api private
-      def find_css(css)
+      def find_css(css, **_options)
         native.css(css)
       end
 
       # @api private
-      def find_xpath(xpath)
+      def find_xpath(xpath, **_options)
         native.xpath(xpath)
       end
+
+      # @api private
+      def session_options
+        Capybara.session_options
+      end
+
+      # @api private
+      def initial_cache
+        {}
+      end
+
+    private
+
+      def option_value(option)
+        return nil if option.nil?
+
+        option[:value] || option.content
+      end
+
+      VISIBILITY_XPATH = XPath.generate do |x|
+        x.ancestor_or_self[
+          x.attr(:style)[x.contains('display:none') | x.contains('display: none')] |
+          x.attr(:hidden) |
+          x.qname.one_of('script', 'head') |
+          (~x.self(:summary) & XPath.parent(:details)[!XPath.attr(:open)])
+        ].boolean
+      end.to_s.freeze
     end
   end
 end

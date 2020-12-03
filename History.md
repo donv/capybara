@@ -1,34 +1,1087 @@
-# Version 2.8.0
-Release date: Unreleased
+# Version 3.34.0
+Release date: 2020-11-26
+
+### Added
+
+* Ability to fill in with emoji when using Chrome with selenium driver (Firefox already worked)
+* Current path assertions/expectations accept optional filter block
+* Animation disabler now specifies `scroll-behavior: auto;` [Nathan Broadbent]
+* :button selector can now find elements by label text [Sean Doyle]
+* `Session#send_keys` to send keys to the current element with focus in drivers that support the 
+  concept of a current element [Sean Doyle]
+
+### Changed
+
+* Text query validates the type parameter to prevent undefined behavior
 
 ### Fixed
+
+* racktest driver better handles fragments and redirection to urls that include fragments
+* Don't error when attempting to get XPath location of a shadow element
+* Missing `readonly?` added to Node::Simple
+* Selenium version detection when loaded via alternate method [Joel Hawksley]
+* Connection count issue if REQUEST_URI value changed by app [Blake Williams]
+* Maintain URI fragment when redirecting in rack-test driver 
+* Text query error message [Wojciech Wnętrzak]
+* Checking a checkbox/radio button with `allow_label_click` now works if there are multiple labels (Issue #2421)
+* `drop` with `Pathname` (Issue #2424)[Máximo Mussini]
+
+# Version 3.33.0
+Release date: 2020-06-21
+
+### Added
+
+* Block passed to `within_session` now receives the new and old session
+* Support for aria-role button when enabled [Seiei Miyagi]
+* Support for aria-role link when enabled
+* Support for `validation_message` filter with :field and :fillable_field selectors
+* Deprecation warnings show source location [Koichi ITO]
+
+### Changed
+
+* Ruby 2.5.0+ is now required
+* Deprecated direct manipulation of the driver and server registries
+
+### Fixed
+
+* Ruby 2.7 warning in minitest `assert_text` [Eileen M. Uchitelle]
+
+
+# Version 3.32.2
+Release date: 2020-05-16
+
+### Fixed
+
+* Don't use lazy enumerator with JRuby due to leaking threads
+* Ruby 2.7 deprecation warning when registering Webrick [Jon Zeppieri]
+* `have_text` description [Juan Pablo Rinaldi]
+
+# Version 3.32.1
+Release date: 2020-04-05
+
+### Fixed
+
+* Rapid set now respects field maxlength (Issue #2332)
+* Only patch pause into legacy actions in Selenium < 4 (Issue #2334)
+
+# Version 3.32.0
+Release date: 2020-03-29
+
+### Added
+
+* Support `delay` setting on click with Selenium
+* Implement rapid set for values longer than 30 characters in text fields with Selenium
+
+### Fixed
+
+* Result#[] and negative max on ranges (Issue #2302/2303) [Jeremy Evans]
+* RackTest form submission rewrites query string when using GET method
+* Ruby 2.7 deprecation warnings in RSpec matcher proxies
+
+# Version 3.31.0
+Release date: 2020-01-26
+
+### Added
+
+* Support setting range inputs with the selenium driver [Andrew White]
+* Support setting range inputs with the rack driver
+* Support drop modifier keys in drag & drop [Elliot Crosby-McCullough]
+* `enabled_options` and `disabled options` filters for select selector
+* Support beginless ranges
+* Optionally allow `all` results to be reloaded when stable - Beta feature - may be removed in
+  future version if problems occur
+
+### Fixed
+
+* Fix Ruby 2.7 deprecation notices around keyword arguments. I have tried to do this without
+  any breaking changes, but due to the nature of the 2.7 changes and some selector types accepting
+  Hashes as locators there are a lot of edge cases. If you find any broken cases please report
+  them and I'll see if they're fixable.
+* Clicking on details/summary element behavior in rack_test driver_
+
+# Version 3.30.0
+Release date: 2019-12-24
+
+### Added
+
+* Display pending requests when they don't complete in time [Juan Carlos Medina]
+* :order option in selector queries - set to :reverse to for reverse document order results
+* Support regexp for :name and :placeholder options in selectors that import filters from
+  _field filter set
+
+### Fixed
+
+* Issue around automatic port assignment - Issue #2245
+* Label selector when label has no id - Issue #2260
+* Preserve clientX/clientY in Selenium HTML5 drag emulation [Nicolò G.]
+* table selector using :with_cols option if last specified column matched but others didn't - Issue #2287
+* Some tests updated for Ruby 2.7 behavior change around keyword args
+
+# Version 3.29.0
+Release date: 2019-09-02
+
+### Added
+
+* Allow clicking on file input when using the block version of `attach_file` with Chrome and Firefox
+* Spatial filters (`left_of`, `right_of`, `above`, `below`, `near`)
+* rack_test driver now supports clicking on details elements to open/close them
+
+### Fixed
+
+* rack_test driver correctly determines visibility for open details elements descendants
+
+### Changed
+
+* Results will now be lazily evaluated when using JRuby >= 9.2.8.0
+
+
+# Version 3.28.0
+Release date: 2019-08-03
+
+### Added
+
+* Allow forcing HTML5 or legacy dragging via the `:html5` option to `drag_to` when using Selenium with Chrome or Firefox
+* Autodetection of drag type interprets not seeing the mousedown event as legacy.
+* HTML5 form validation `:valid` node filter added to `:field` and `:fillable_field` selectors
+* When using Capybara registered :puma server - patches Puma 4.0.x to fix SSL connection behavior. Removes
+  default `queue_requests` setting - Issue #2227
+
+# Version 3.27.0
+Release date: 2019-07-28
+
+### Added
+
+* Allow to use chromedriver/geckodriver native `is_element_displayed` endpoint via Selenium
+  driver `native_displayed` option for performance reasons. Disabled by default due to endpoints
+  currently not handling &lt;details> element descendants visibility correctly.
+
+### Fixed
+
+* Ignore negative lookahead/lookbehind regex when performing initial XPath text matching
+* Reloading of elements found via `ancestor` and `sibling`
+* Only default puma settings to `queue_requests: false` when using SSL
+* Visibility of descendants of &lt;details> elements is correctly determined when using rack_test
+  and the selenium driver with Capybara optimized atoms
+* local/session storage clearance in Chrome when clearing only one of them - Issue #2233
+
+# Version 3.26.0
+Release date: 2019-07-15
+
+### Added
+
+* `w3c_click_offset` configuration option applies to `right_click` and `double_click` as well as `click`
+* Warning when passing `nil` to the text/content assertions/expectations
+* `Session#server_url` returns the base url the AUT is being run at (when controlled by Capybara)
+* `option` selector type accepts an integer as locator
+
+### Fixed
+
+* Default puma server registration now specifies `queue_requests: false` - Issue #2227
+* Workaround issue with FF 68 and hanging during reset if a system modal is visible
+* Don't expand file path if it's already absolute - Issue #2228
+
+# Version 3.25.0
+Release date: 2019-06-27
+
+### Added
+
+* Animation disabler also disables before and after pseudoelements - Issue #2221 [Daniel Heath]
+* `w3c_click_offset` configuration option to determine whether click offsets are calculated from element
+  center or top left corner
+
+### Fixed
+
+* Work around issue with chromedriver 76/77 in W3C mode losing mouse state during legacy drag. Only fixed if
+  both source and target are simultaneously inside the viewport - Issue #2223
+* Negative ancestor expectations/predicates were incorrectly checking siblings rather than ancestors
+
+# Version 3.24.0
+Release date: 2019-06-13
+
+### Added
+
+* Log access when using the Selenium driver with Chrome 75 in W3C mode has been reenabled.
+
+### Changed
+
+* Selenium driver now selects all current content and then sends keys rather than clearing field by JS
+  and then sending keys when setting values to text inputs in order to more closely simulate user behavior
+
+### Fixed
+
+* Relative paths passed to `attach_file` will be assumed to be relative to the current working directory when using the
+  Selenium driver
+
+# Version 3.23.0
+Release date: 2019-06-10
+
+### Added
+
+* Improved error message when using Chrome in W3C mode and attempting to access logs
+* Support driver specific options for Element#drag_to
+* Support setting `<input type="color">` elements with the selenium driver
+
+### Fixed
+
+* Tightened conditions when in expression text option matching will be used
+* Improved Selenium drivers HTML5 drag and drop emulation compatibility with SortableJS library (and others)
+
+# Version 3.22.0
+Release date: 2019-05-29
+
+### Added
+
+* `ancestor`/`sibling` assertions and matchers added
+* Documentation Updates and Fixes - Many thanks again to Masafumi Koba! [Masafumi Koba]
+* Added `:with` alias for `:option` filter on `:checkbox` and `:radio_button` selectors
+
+### Changed
+
+* Selenium driver with Chrome >= 73 now resets cookies and local/session storage after navigating
+  to 'about:blank' when possible to minimize potential race condition
+
+# Version 3.21.0
+Release date: 2019-05-24
+
+### Added
+
+* Element#drop - Chrome and Firefox, via the selenium driver, support dropping files/data on elements
+* Default CSS used for `attach_file` `make_visible: true` now includes auto for
+  height and width to handle more ways of hiding the file input element
+* Documentation Updates and Fixes - Many thanks to Masafumi Koba! [Masafumi Koba]
+
+### Changed
+
+* Deprecate support for CSS locator being a Symbol
+
+# Version 3.20.2
+Release date: 2019-05-19
+
+### Fixed
+
+* Move `uglifier` from runtime to development dependency [miyucy]
+
+# Version 3.20.1
+Release date: 2019-05-17
+
+### Fixed
+
+* RackTest driver considers &lt;template> elements to be non-visible and ignores the contents
+
+# Version 3.20.0
+Release date: 2019-05-14
+
+### Added
+
+* `Node#obscured?` to check viewport presence and element overlap
+* `:obscured` system filter to check whether elements are obscured in finders, assertions, and expectations
+* :label selector :for option can be a regexp
+* Significantly smaller `isDisplayed`/`getAttribute` atoms for selenium driver. If these produce issues you can disable their use
+  by setting an environment variable named 'DISABLE_CAPYBARA_SELENIUM_OPTIMIZATIONS' (Please also report any issues).
+* `href: false` option with `find_link`/`click_link`/:link selector ignores `href` presence/absence
+
+### Fixed
+
+* Workaround Safari issue with send_keys not correctly using top level modifiers
+* Workaround Safari not retrying click due to incorrect error type
+* Fix Safari attach_file block mode when clicking elements associated to the file input
+* Workaround Safari issue with repeated hover
+
+# Version 3.19.1
+Release date: 2019-05-11
+
+### Fixed
+
+* Fix access to specializations when Selenium::Driver is subclassed [James Mead]
+
+# Version 3.19.0
+Release date: 2019-05-09
+
+### Added
+
+
+* Syntactic sugar `#once`, `#twice`, `#thrice`, `#exactly`, `#at_least`, `#at_most`, and `#times`
+  added to `have_selector`, `have_css`, `have_xpath`, and `have_text` RSpec matchers
+* Support for multiple expression types in Selector definitions
+* Reduced wirecalls for common actions in Selenium driver
+
+### Fixed
+
+* Workaround Chrome 75 appending files to multiple file inputs
+* Suppressed retry when detecting http vs https server connection
+
+# Version 3.18.0
+Release date: 2019-04-22
+
+### Added
+
+* XPath Selector query optimized to make use of Regexp :text option in initial element find
+
+### Fixed
+
+* Workaround issue where Chrome/chromedriver 74 can return the wrong error type when a click is intercepted
+
+# Version 3.17.0
+Release date: 2019-04-18
+
+### Added
+
+* Initial support for selenium-webdriver 4.0.0.alpha1
+* :button selector will now also match on `name` attribute
+
+### Fixed
+
+* Suppress warnings generated by using selenium-webdriver 3.141.5926
+* Mask Appium issue with finder visibility optimizations (non-optimal)
+
+# Version 3.16.2
+Release date: 2019-04-10
+
+### Fixed
+
+* Fix Session#quit resetting of memoized document
+
+# Version 3.16.1
+Release date: 2019-03-30
+
+### Fixed
+
+* Fix potential 'uninitialized constant' error when using the :selenium_chrome driver [jeffclemens-ab]
+
+# Version 3.16
+Release date: 2019-03-28
+
+### Changed
+
+* Ruby 2.4.0+ is now required
+* Selenium driver now defaults to using a persistent http client connection
+
+### Added
+
+* :wait option in predicates now accepts `true` to selectively override when `Capybara.predicates_wait == false`
+
+# Version 3.15
+Release date: 2019-03-19
+
+### Added
+
+* `attach_file` now supports a block mode on JS capable drivers to more accurately test user behavior when file inputs are hidden (beta)
+* :table selector now supports `with_rows`, 'rows', `with_cols`, and 'cols' filters
+
+### Fixed
+
+* Fix link selector when `Capybara.test_id` is set - Issue #2166 [bingjyang]
+
+
+# Version 3.14
+Release date: 2019-02-25
+
+### Added
+
+* rack_test driver now supports reloading elements when the document changes - Issue #2157
+* Selenium driver HTML5 drag-drop emulation now emits multiple move events so drag direction
+  is determinable [Erkki Eilonen, Thomas Walpole]
+* Capybara.server_errors now defaults to [Exception] - Issue #2160 [Edgars Beigarts]
+### Fixed
+
+* Workaround hover issue with FF 65 - Issue #2156
+* Workaround chromedriver issue when setting blank strings to react controlled text fields
+* Workaround chromedriver issue with popup windows not loading content - https://bugs.chromium.org/p/chromedriver/issues/detail?id=2650&q=load&sort=-id&colspec=ID%20Status%20Pri%20Owner%20Summary
+
+# Version 3.13.2
+Release date: 2019-01-24
+
+### Fixed
+
+* Remove extraneous output
+
+# Version 3.13.1
+Release date: 2019-01-24
+
+### Fixed
+
+* Only use Selenium visibility optimization when JS atom is available - Issue #2151
+
+# Version 3.13.0
+Release date: 2019-01-23
+
+### Added
+
+* Session#quit added
+* #scroll_to added to allow scrolling page/elements to specified locations
+* Speed optimizations around multiple element location and path generation when using the Selenium driver
+* Support for locator type checking in custom selectors
+* Allow configuration of gumbo use - defaults to off
+* `assert_style`/`has_style`/`have_style` deprecated in favor of `assert_matches_style`/`matches_styles?`/`match_style`
+* :style filter added to selectors
+
+# Version 3.12.0
+Release date: 2018-11-28
+
+### Added
+
+* Support Ruby 2.6 endless range in Result#[] and query `:between` option
+* Pre-registered headless firefox driver :selenium_headless [Andrew Havens]
+* Selenium driver now defaults to clearing `sessionStorage` and `localStorage`. To disable pass `clear_local_storage: false` and/or `clear_session_storage: false` when creating Capybara::Selenium::Driver instance in your driver registration
+
+### Fixed
+
+* Raise error if only :x or :y are passed as an offset to click methods
+
+### Removed
+
+* Support for RSpec < 3.5
+
+# Version 3.11.1
+Release date: 2018-11-16
+
+### Fixed
+
+* Fixed :link_or_button XPath generation when it has had an expression filter added
+
+# Version 3.11.0
+Release date: 2018-11-14
+
+### Added
+
+* Ability for node filters to set detailed error messages
+* `Capybara::HTML` Will use `nokogumbo` for HTML parsing if installed
+* `Selector#locator_filter` added to allow for dynamic locator in selectors
+
+### Fixed
+
+* Node filters are evaluated in the context of the Selector they are used in to ensure the correct options are used
+
+# Version 3.10.1
+Release date: 2018-11-03
+
+### Fixed
+
+* Fix `aria-label` and `test_id` matching for `link_or_button` selector type - Issue #2125
+* Fixed crash in element path creation for matcher failure messages - Issue #2120
+
+# Version 3.10.0
+Release date: 2018-10-23
+
+### Added
+
+* :class filter can now check for class names starting with !
+* Selector `xpath`/`css` expression definitions will get filter names from block parameters if not explicitly provided
+* `any_of_selectors` assertions and matchers to complement `all_of_selectors` and `none_of_selectors`
+
+### Fixed
+
+* Selector `css` expression definition declared filters now work again
+* Cleaned up warnings [Yuji Yaginuma]
+* Workaround installation of rspec matcher proxies under jruby by reverting to the old solution not using prepend, so jruby bugs are not hit - Issue #2115
+
+# Version 3.9.0
+Release date: 2018-10-03
+
+### Added
+
+* Selenium with Chrome removes all cookies at session reset instead of just cookies from current domain if possible
+* Support for Regexp for system :id and :class filters where possible
+* `using_session` now accepts a session object as well as the name of the session for users who  manually manage sessions
+* The `:field` selector will now find `type = "hidden"` fields if the `type: "hidden"` filter option is provided
+
+# Version 3.8.2
+Release date: 2018-09-26
+
+### Fixed
+
+* Fixed negated class selector option - Issue #2103
+
+# Version 3.8.1
+Release date: 2018-09-22
+
+### Fixed
+
+* Filling in of date fields with a string when using selenium chrome regression [Micah Geisel]
+
+# Version 3.8.0
+Release date: 2018-09-20
+
+### Added
+
+* Workaround geckodriver 0.22 issue with undefined pause durations
+* :element selector ignores XML namespaces
+
+### Fixed
+
+* Added Errno::ECONNRESET to the errors which will allows https server detection
+
+# Version 3.7.2
+Release date: 2018-09-12
+
+### Fixed
+
+* Fix MatchQuery based matchers when used on a root element found using any type of parent/ancestor query - Issue #2097
+
+* Fix Chrome/FF HTML5 drag simulation for elements (a, img) which default to draggable - Issue #2098
+
+# Version 3.7.1
+Release date: 2018-09-05
+
+### Fixed
+
+* Restored ability to pass symbol as the CSS selector when calling `has_css?`/`have_css`/etc - Issue #2093
+
+# Version 3.7.0
+Release date: 2018-09-02
+
+### Added
+
+* `Capybara.disable_animation` can be set to a CSS selector to identify which elements will have animation disabled [Michael Glass]
+* `Capybara.default_normalize_ws` option which sets whether or not text predicates and matchers (`has_text?`, `has_content?`, `assert_text`, etc) use `normalize_ws` option by default. Defaults to false. [Stegalin Ivan]
+* Selector based predicates, matchers, and finders now support the `:normalize_ws` option for the `:text`/`:exact_text` filters. Defaults to the `Capybara.default_normalize_ws`setting above.
+* Element `choose`/`check`/`uncheck`/`attach_file`/`fill_in` can now operate on the element they're called on or a descendant if no locator is passed.
+
+### Fixed
+
+* All CSS styles applied by the `Element#attach_file` `:make_visible` option will now have `!important` priority set to ensure they override any other specified style.
+* Firefox file inputs are only manually cleared when necessary.
+
+# Version 3.6.0
+Release date: 2018-08-14
+
+### Added
+
+* Workaround geckodriver/firefox send_keys issues as much as possible using the Selenium actions API
+* Workaround lack of HTML5 native drag and drop events when using Selenium driver with Chrome and FF >= 62
+* `Capybara.predicates_wait` option which sets whether or not Capybaras matcher predicate methods (`has_css?`, `has_selector?`, `has_text?`, etc.) default to using waiting/retrying behavior (defaults to true)
+
+# Version 3.5.1
+Release date: 2018-08-03
+
+### Fixed
+
+* Fixed misspelled method name `refute_matches_elector` => `refute_matches_selector`
+
+# Version 3.5.0
+Release date: 2018-08-01
+
+### Added
+
+* text predicates and matchers (`has_text?`, `has_content?`, `assert_text`, etc) now support a `normalize_ws` option
+
+### Fixed
+
+* `attach_file` with Selenium and local Firefox 62+ now correctly generates only one change event when attaching multiple files
+
+# Version 3.4.2
+Release date: 2018-07-24
+
+### Fixed
+
+* `match_xxx` selectors and `matches_xxx?` predicates work correctly with elements found using a sibling selector - Issue #2073
+
+# Version 3.4.1
+Release date: 2018-07-20
+
+### Fixed
+
+* `Session#evaluate_script` now strips the script in `Session` rather than only in the Selenium driver
+
+# Version 3.4.0
+Release date: 2018-07-19
+
+### Fixed
+
+* Make selenium driver :backspace clear strategy work even if caret location is in middle of field content [Champier Cyril]
+* Selenium issue with fieldset nested in disabled fieldset not being considered disabled
+* `Session#evaluate_script` and `Element#evaluate_script` now strip leading/trailing whitespace from scripts [Ian Lesperance]
+
+### Added
+
+* Work around Selenium lack of support for `file_detector` with remote geckodriver
+* `#within_frame` locator is optional when only one frame exists
+* `Capybara.test_id` option that allows for matching the Capybara provided selector types on an arbitrary attribute
+  (defaults to nil), set to your test id attribute ('data-test-id, etc) if using test id attributes in your project
+
+# Version 3.3.1
+Release date: 2018-06-27
+
+### Fixed
+
+* `selenium-webdriver` version check [ahorek]
+* Selenium driver correctly responds to `disabled?` for fieldset elements - Issue #2059 [Thomas Walpole]
+
+# Version 3.3.0
+Release date: 2018-06-25
+
+### Added
+
+* RackTest driver now handles 307/308 redirects
+* `execute_async_script` can now be called on elements to run the JS in the context of the element
+* `:download` filter option on `:link' selector
+* `Window#fullscreen`
+* `Element#style` and associated matchers
+
+### Changed
+
+* Minimum "supported" `selenium-webdriver` is raised to 3.5.0 (but you really should be using newer than that)
+
+### Fixes
+
+* Selenium driver with Firefox workaround for clicking on table row - https://github.com/mozilla/geckodriver/issues/1228
+* :class and :id filters applied to CSS based selectors now correctly handle the CSS comma
+* Selenium driver handles namespaces when generating an elements `#path` - Issue #2048
+
+# Version 3.2.1
+Release date: 2018-06-04
+
+### Fixes
+
+* Only split CSS selectors when :class or :id options are given. Restores 3.1.1 functionality for now but the underlying issue
+  will require a larger fix, hopefully coming soon. - Issue #2044 [Thomas Walpole]
+
+# Version 3.2.0
+Release date: 2018-06-01
+
+### Changed
+
+* Ruby 2.3.0+ is now required
+* `ElementNotFound` errors raised in selector filters are interpreted as non-matches
+
+### Added
+
+* New global configuration `default_set_options` used in `Capybara::Node::Element#set` as default `options` hash [Champier Cyril]
+* `execute_script` and `evaluate_script` can now be called on elements to run the JS in the context of the element [Thomas Walpole]
+* Filters in custom selectors now support a `matcher` Regexp to handle multiple filter options [Thomas Walpole]
+* `:element` selector type which will match on any attribute (other than the reserved names) passed as a filter option [Thomas Walpole]
+* `:class` filter option now supports preceding class names with `!` to indicate not having that class [Thomas Walpole]
+* `:class` and `:id` filter options now accept `XPath::Expression` objects to allow for more flexibility in matching [Thomas Walpole]
+* `Capybara.disable_animation` setting which triggers loading of a middleware that attempts to disable animations in pages.
+  This is very much a beta feature and may change/disappear in the future. [Thomas Walpole]
+
+# Version 3.1.1
+Release date: 2018-05-25
+
+### Fixes
+
+* Ensure keystrokes are sent when setting time/date fields to a string with the Selenium driver [Thomas Walpole]
+
+# Version 3.1.0
+Release date: 2018-05-10
+
+### Added
+
+* Support for using `select` with text inputs associated with a datalist element
+* `type` filter on `:button` selector
+* Support for server operating in https mode
+* Selenium driver now uses JS to fill_in/set date and time fields when passed date or time objects [Aleksei Gusev, Thomas Walpole]
+
+# Version 3.0.3
+Release date: 2018-04-30
+
+### Fixes
+
+* Issue in `check` where the locator string could not be omitted
+* Selenium browser type detection when using remote [Ian Ker-Seymer]
+* Potential hang when waiting for requests to complete [Chris Zetter]
+
+# Version 3.0.2
+Release date: 2018-04-13
+
+### Fixes
+
+* Fix expression filter descriptions in some selector failure messages
+* Fix compounding of negated matchers - Issue #2010
+
+# Version 3.0.1
+Release date: 2018-04-06
+
+### Changed
+
+* Restored ability for `Capybara.server=` to accept a proc which was accidentally removed in 3.0.0
+
+# Version 3.0.0
+Release date: 2018-04-05
+
+### Changed
+
+* Selenium driver only closes extra windows for browsers where that is known to work (Firefox, Chrome)
+* "threadsafe" mode is no longer considered beta
+
+### Fixes
+
+* Multiple file attach_file with Firefox
+* Use Puma::Server directly rather than Rack::Handler::Puma so signal handlers don't prevent test quitting
+
+# Version 3.0.0.rc2
+Release date: 2018-03-23
+
+### Changed
+
+* Visibile text whitespace is no longer fully normalized in favor of being more in line with the WebDriver spec for visible text
+* Drivers are expected to close extra windows when resetting the session
+* Selenium driver supports Date/Time when filling in date/time/datetime-local inputs
+* `current_url` returns the url for the top level browsing context
+* `title` returns the title for the top level browsing context
+
+### Added
+
+* `Driver#frame_url` returns the url for the current frame
+* `Driver#frame_title` returns the title for the current frame
+
+# Version 3.0.0.rc1
+Release date: 2018-03-02
+
+### Added
+* Support for libraries wrapping Capybara elements and providing a `#to_capybara_node` method
+
+### Changed
+
+* `first` now raises ElementNotFound, by default, instead of returning nil when no matches are found  - Issue #1507
+* 'all' now waits for at least one matching element by default.  Pass `wait: false` if you want the previous
+  behavior where an empty result would be returned immediately if no matching elements exist yet.
+* ArgumentError raised if extra parameters passed to selector queries
+
+### Removed
+
+* Ruby < 2.2.2 support
+* `Capybara.exact_options` no longer exists. Just use `exact: true` on relevant actions/finders if necessary.
+* All previously deprecated methods removed
+* RSpec 2.x support
+* selenium-webdriver 2.x support
+* Nokogiri < 1.8 support
+* `field_labeled` alias for `find_field`
+
+# Version 2.18.0
+Release date: 2018-02-12
+
+### Fixed
+
+* Firefox/geckodriver setting of contenteditable childs contents
+* Ignore Selenium::WebDriver::Error::SessionNotCreatedError when quitting driver [Tim Connor]
+
+### Removed
+
+* Headless chrome modal JS injection that is no longer needed for Chrome 64+/chromedriver 2.35+
+
+
+# Version 2.17.0
+Release date: 2018-01-02
+
+### Added
+
+* `have_all_of_selectors`, `have_none_of_selectors` RSpec matchers for parity with minitest assertions [Thomas Walpole]
+
+### Fixed
+
+* Allow xpath 3.x gem [Thomas Walpole]
+* Issue when drivers returned nil for `current_path` and a matcher was used with a Regexp [Thomas Walpole]
+* Error message when visible element not found, but non-visible was [Andy Klimczak]
+
+# Version 2.16.1
+Release date: 2017-11-20
+
+### Fixed
+
+* Fix rack_test driver for rack_test 0.7.1/0.8.0 [Thomas Walpole]
+* `accept_prompt` response text can contain quotes when using selenium with headless chrome [Thomas Walpole]
+
+# Version 2.16.0
+Release date: 2017-11-13
+
+### Added
+
+* Attempt to move element into view when selenium doesn't correctly do it - See PR #1917 [Thomas Walpole]
+* `current_path` matchers will now autodetect path vs url based on string to be matched. Deprecates
+  `:only_path` in favor of `:ignore_query` option [Thomas Walpole]
+* Session#evaluate_async_script [Thomas Walpole]
+
+### Fixed
+
+* Default prompt value when using headless Chrome works correctly [Thomas Walpole]
+* Support new modal error returned by selenium-webdriver 3.7 for W3C drivers [Thomas Walpole]
+* Calling `respond_to?` on the object passed to `Capybara.configure` block - Issue #1935
+
+# Version 2.15.4
+Release date: 2017-10-07
+
+### Fixed
+*  Visiting an absolute URL shouldn't overwrite the port when no server or always_include_port=false - Issue #1921
+
+# Version 2.15.3
+Release date: 2017-10-03
+
+### Fixed
+*  Visiting '/' when Capybara.app_host has a trailing '/' - Issue #1918 [Thomas Walpole]
+
+# Version 2.15.2
+Release date: 2017-10-02
+
+### Fixed
+
+*  Include within scope description in element not found/ambiguous errors [Thomas Walpole]
+*  Raise error when no activation block is passed to modal methods if using headless chrome [Thomas Walpole]
+*  Don't retry element access when inspecting [Ivan Neverov]
+*  Don't override a specified port (even if it is default port) in visited url [Thomas Walpole]
+
+# Version 2.15.1
+
+Release date: 2017-08-04
+
+### Fixed
+
+*  `attach_file` with no extension/MIME type when using the `:rack_test` driver [Thomas Walpole]
+
+# Version 2.15.0
+
+Release date: 2017-08-04
+
+### Added
+
+*  `sibling` and `ancestor` finders added [Thomas Walpole]
+*  Added ability to pass options to registered servers when setting
+*  Added basic built-in driver registrations `:selenium_chrome` and `:selenium_chrome_headless` [Thomas Walpole]
+*  Add `and_then` to Capybara RSpec matchers which behaves like the previous `and` compounder. [Thomas Walpole]
+*  Compound RSpec expectations with Capybara matchers now run both matchers inside a retry loop rather
+   than waiting for one to pass/fail before checking the second.  Will make `#or` more performant and confirm
+   both conditions are true "simultaneously" for `and`.  [Thomas Walpole]
+   If you still want the
+*  Default filter values are now included in error descriptions [Thomas Walpole]
+*  Add `Session#refresh` [Thomas Walpole]
+*  Loosened restrictions on where `Session#within_window` can be called from [Thomas Walpole]
+*  Switched from `mime-types` dependency to `mini_mime` [Jason Frey]
+
+# Version 2.14.4
+
+Release date: 2017-06-27
+
+### Fixed
+
+* Fix retrieval of session_options for HaveSelector matcher descriptions - Issue #1883
+
+# Version 2.14.3
+
+Release date: 2017-06-15
+
+### Fixed
+
+* Minitest assertions now raise the correct error type - Issue #1879 [Thomas Walpole]
+* Improve flexibility of detecting Chrome headless mode [Thomas Walpole]
+
+# Version 2.14.2
+
+Release date: 2017-06-09
+
+### Fixed
+
+* Workaround for system modals when using headless Chrome now works if the page changes
+
+# Version 2.14.1
+
+Release date: 2017-06-07
+
+### Fixed
+
+* Catch correct error when unexpected system modals are discovered in latest selenium [Thomas Walpole]
+* Update default `puma` server registration to encourage it to run in single mode [Thomas Walpole]
+* Suppress invalid element errors raised while lazily evaluating the results of `all` [Thomas Walpole]
+* Added missing `with_selected` option to the :select selector to match `options`/`with_options` options - Issue #1865 [Bartosz Nowak]
+* Workaround broken system modals when using selenium with headless Chrome
+
+# Version 2.14.0
+
+Release date: 2017-05-01
+
+### Added
+
+* "threadsafe" mode that allows per-session configuration
+* `:type` filter added to the `:fillable_field` selector
+* Proxy methods when using RSpec for `all`/`within` that call either the Capybara::DSL or RSpec matchers
+  depending on arguments passed
+* Support for the new errors in selenium-webdriver 3.4
+
+### Fixed
+
+* Element#inspect doesn't raise an error on obsolete elements
+* Setting a contenteditable element with Selenium and Chrome 59
+* Workaround a hang while setting the window size when using geckodriver 0.16 and Firefox 53
+* Clicking on url with a blank href goes to the current url when using the RackTest driver
+
+# Version 2.13.0
+
+Release date: 2017-03-16
+
+### Added
+
+* Selenium driver supports returning element(s) from evaluate_script [Thomas Walpole]
+* rack_test driver supports click on checkboxes and radio buttons to change their states [Thomas Walpole]
+* Support RSpec equivalent assertions and expectations for MiniTest [Thomas Walpole]
+
+### Fixed
+
+* Editing of content editable children with selenium
+
+# Version 2.12.1
+
+Release date: 2017-02-16
+
+### Fixed
+*  Disable lazy Capybara::Results evaluation for JRuby due to ongoing issues
+
+# Version 2.12.0
+
+Release date: 2017-01-22
+
+### Added
+
+* Session#switch_to_frame for manually handling frame switching - Issue #1365 [Thomas Walpole]
+* Session#within_frame now accepts a selector type (defaults to :frame) and locator [Thomas Walpole]
+* Session#execute_script and Session#evaluate_script now accept optional arguments that will be passed to the JS function.  This may not be supported
+  by all drivers, and the types of arguments that may be passed is limited.  If drivers opt to support this feature they should support passing page elements. [Thomas Walpole]
+* :exact option for text and title matchers - Issue #1256 [Thomas Walpole]
+* :exact_text option for selector finders/minders - Issue #1256 [Thomas Walpole]
+* Capybara.exact_text setting that affects the text matchers and :text options passed to selector finders/matchers. Issue #1256 [Thomas Walpole]
+* :make_visible option for #attach_file that allows for convenient changing of the CSS style of a file input element before attaching the file to it.  Requires driver
+  support for passing page elements to Session#execute_script [Thomas Walpole]
+* assert_all_selectors/assert_none_of_selectors assertions added
+* :link selector (used by find_link/click_link) now supports finding hyperlink placeholders (no href attribute) when href: nil option is specified [Thomas Walpole]
+* `within_element` as an alias of `within` due to RSpec collision
+
+### Fixed
+
+*  Fields inside a disabled fieldset are now correctly considered disabled - Issue #1816 [Thomas Walpole]
+*  Lazy Capybara::Results evaluation enabled for JRuby 9.1.6.0+
+*  A driver returning nil for #current_url won't raise an exception when calling #current_path [Dylan Reichstadt]
+*  Support Ruby 2.4.0 unified Integer [Koichi ITO]
+*  RackTest driver no longer modifies the text content of textarea elements in order to behave more like a real browser [Thomas Walpole]
+*  TextQuery (assert_text/have_text/etc) now ignores errors when trying to generate more helpful errors messages so the original error isn't hidden [Thomas Walpole]
+
+# Version 2.11.0
+
+Release date: 2016-12-05
+
+### Added
+
+* Options for clearing session/local storage on reset added to the Selenium driver
+* Window size changes wait for the size to stabilize
+* Defined return value for most actions
+* Ignore specific error when quitting selenium driver instance - Issue #1773 [Dylan Reichstadt, Thomas Walpole]
+* Warn on selenium unknown errors rather than raising when quitting driver [Adam Pohorecki, Thomas Walpole]
+* Capybara::Result#each now returns an `Enumerator` when called without a block - Issue #1777 [Thomas Walpole]
+
+### Fixed
+
+* Selenium driver with Chrome should support multiple file upload [Thomas Walpole]
+* Fix visible: :hidden with :text option behavior [Thomas Walpole]
+
+# Version 2.10.2
+
+Release date: 2016-11-30
+
+### Fixed
+
+* App exceptions with multiple parameter initializers now re-raised correctly - Issue #1785 [Michael Lutsiuk]
+* Use Addressable::URI when parsing current_path since it's more lenient of technically invalid URLs - Issue #1801 [Marcos Duque, Thomas Walpole]
+
+# Version 2.10.1
+
+Release date: 2016-10-08
+
+### Fixed
+* App errors are now correctly raised with the explanatory cause in JRuby [Thomas Walpole]
+* Capybara::Result optimization disabled in JRuby due to issue with lazy enumerator evaluation [Thomas Walpole]
+  See: https://github.com/jruby/jruby/issues/4212
+
+# Version 2.10.0
+
+Release date: 2016-10-05
+
+### Added
+
+* Select `<button>` elements with descendant images with `alt` attributes matching the locator [Ian Lesperance]
+* Locator string is optional in selector based matchers [Thomas Walpole]
+* Selectors can specify their default visible setting [Thomas Walpole]
+* Selector based finders and matchers can be passed a block to filter the results within the retry behavior [Thomas Walpole]
+
+# Version 2.9.2
+
+Release date: 2016-09-29
+
+### Fixed
+
+* :label built-in selector finds nested label/control by control id if the label has no 'for' attribute [Thomas Walpole]
+* Warning issued if an unknown selector type is specified [Thomas Walpole]
+
+# Version 2.9.1
+
+Release date: 2016-09-23
+
+### Fixed
+
+* allow_label_click option did not work in some cases with Poltergeist - Issue #1762 [Thomas Walpole]
+* matches_selector? should have access to all of a selectors options except the count options [Thomas Walpole]
+
+# Version 2.9.0
+
+Release date: 2016-09-19
+
+### Fixed
+
+* Issue with rack-test driver and obsolete mime-types when using `#attach_file` - Issue #1756 [Thomas Walpole]
+
+### Added
+
+* `:class` option to many of the built-in selectors [Thomas Walpole]
+* Removed need to specify value when creating `:boolean` filter type in custom selectors [Thomas Walpole]
+* Filters can now be implemented through the XPath/CSS expressions in custom selectors [Thomas Walpole]
+* `Element#matches_xpath?` and `Element#matches_css?` [Thomas Walpole]
+
+# Version 2.8.1
+
+Release date: 2016-08-25
+
+### Fixed
+
+* Fixed error message from have_text when text is not found but contains regex special characters [Ryunosuke Sato]
+* Warn when :exact option is passed that has no effect [Thomas Walpole]
+
+# Version 2.8.0
+
+Release date: 2016-08-16
+
+### Fixed
+
 * Issue with modals present when closing the page using selenium - Issue #1696 [Jonas Nicklas, Thomas Walpole]
 * Server errors raised in test code have the cause set to an explanatory exception
   in rubies that support Exception#cause rather than a confusing ExpectationNotMet - Issue #1719 [Thomas Walpole]
-* background/given/given! RSoec aliases will work if RSpec config.shared_context_metadata_behavior == :apply_to_host_groups [Thomas Walpole]
+* background/given/given! RSpec aliases will work if RSpec config.shared_context_metadata_behavior == :apply_to_host_groups [Thomas Walpole]
 * Fixed setting of unexpectedAlertError now that Selenium will be freezing the Capabilities::DEFAULTS [Thomas Walpole]
+
 ### Added
-* 'check', 'uncheck', and 'choose' will now click the associated label if the checkbox/radio button is not visible [Thomas Walpole]
+
+* 'check', 'uncheck', and 'choose' can now optionally click the associated label if the checkbox/radio button is not visible [Thomas Walpole]
 * Raise error if Capybara.app_host/default_host are specified incorrectly [Thomas Walpole]
 * Capybara::Selector::FilterSet allows for sharing filter definitions between selectors [Thomas Walpole]
 * Remove need to pass nil locator in most node actions when locator is not needed [Thomas Walpole]
 * New frames API for drivers - Issue #1365 [Thomas Walpole]
 * Deprecated Element#parent in favor of Element#query_scope to better indicate what it is [Thomas Walpole]
 * Improved error messages for have_text matcher [Alex Chaffee, Thomas Walpole]
+* The `:with` option for the field selector now accepts a regular expression for matching the field value [Uwe Kubosch]
+* Support matching on aria-label attribute when finding fields/links/buttons - Issue #1528 [Thomas Walpole]
+* Optimize Capybara::Result to only apply fields as necessary in common use-case of `.all[idx]` [Thomas Walpole]
 
-#Version 2.7.1
+# Version 2.7.1
+
 Release date: 2016-05-01
 
 ### Fixed
+
 * Issue where within_Frame would fail with Selenium if the frame is removed from within itself [Thomas Walpole]
 * Reset sessions in reverse order so sessions with active servers are reset last - Issue #1692 [Jonas Nicklas, Thomas Walpole]
 
 # Version 2.7.0
+
 Release date: 2016-04-07
 
 ### Fixed
-* Element#visible?/checked?/disabled?/selected? Now return boolean
-  as expected when using the rack_test driver [Thomas Walpole]
+
+* Element#visible?/checked?/disabled?/selected? Now return boolean as expected when using the rack_test driver [Thomas Walpole]
 * The rack_test driver now considers \<input type="hidden"> elements as non-visible [Thomas Walpole]
 * A nil locator passed to the built-in html type selectors now behaves consistently, and finds elements of the expected types [Thomas Walpole]
 * Capybara::Server now searches for available ports on the same interface it binds to [Aaron Stone]
@@ -36,7 +1089,8 @@ Release date: 2016-04-07
 * Warning output if unused parameters are passed to a selector query [Thomas Walpole]
 
 ### Added
-* Capybara now waits for requests to Capybaras server to complete while restting the session [John Hawthorn, Thomas Walpole]
+
+* Capybara now waits for requests to Capybaras server to complete while resetting the session [John Hawthorn, Thomas Walpole]
 * Capybara.reuse_server option to allow disabling of sharing server instance between sessions [Thomas Walpole]
 * :multiple filter added to relevant selectors [Thomas Walpole]
 * Provided server registrations for :webrick and :puma. Capybara.server = :puma for testing with Rails 5 [Thomas Walpole]
@@ -48,22 +1102,28 @@ Release date: 2016-04-07
   save_page/save_screenshot [Thomas Walpole]
 * :label selector [Thomas Walpole]
 
-#Version 2.6.2
-Relase date: 2016-01-27
+# Version 2.6.2
 
-### Fixed
-* support for more than just addressable 2.4.0 [Thomas Walpole]
-
-# Version 2.6.1
 Release date: 2016-01-27
 
 ### Fixed
+
+* support for more than just addressable 2.4.0 [Thomas Walpole]
+
+# Version 2.6.1
+
+Release date: 2016-01-27
+
+### Fixed
+
 * Add missing require for addressable [Jorge Bejar]
 
 # Version 2.6.0
+
 Relase date: 2016-01-17
 
 ### Fixed
+
 * Fixed path escaping issue with current_path matchers [Thomas Walpole, Luke Rollans] (Issue #1611)
 * Fixed circular require [David Rodríguez]
 * Capybara::RackTest::Form no longer overrides Object#method [David Rodriguez]
@@ -72,6 +1132,7 @@ Relase date: 2016-01-17
 
 
 ### Added
+
 * Capybara.modify_selector [Thomas Walpole]
 * xfeature and ffeature aliases added when using RSpec [Filip Bartuzi]
 * Selenium driver supports a :clear option to #set to handle different strategies for clearing a field [Thomas Walpole]
@@ -80,15 +1141,18 @@ Relase date: 2016-01-17
 * Modal API methods now default wait time to Capybara.default_max_wait_time [Thomas Walpole]
 
 # Version 2.5.0
+
 Release date: 2015-08-25
 
 ### Fixed
+
 * Error message now raised correctly when invalid options passed to 'have_text'/'have_content' [Thomas Walpole]
 * Rack-test driver correctly gets document title when elements on the page have nested title elements (SVG) [Thomas Walpole]
 * 'save_page' no longer errors when using Capybara.asset_host if the page has no \<head> element [Travis Grathwell]
 * rack-test driver will ignore clicks on links with href starting with '#' or 'javascript:'
 
 ### Added
+
 * has_current_path? and associated asserts/matchers added [Thomas Walpole]
 * Implement Node#path in selenium driver [Soutaro Matsumoto]
 * 'using_session' is now nestable [Thomas Walpole]
@@ -106,25 +1170,32 @@ Release date: 2015-08-25
 * Clear field using backspaces in Selenium driver by using `:fill_options => { :clear => :backspace }` [Joe Lencioni]
 
 ### Deprecated
+
 * Capybara.default_wait_time deprecated in favor of Capybara.default_max_wait_time to more clearly explain its purpose [Paul Pettengill]
 
-#Version 2.4.4
+# Version 2.4.4
+
 Release date: 2014-10-13
 
 ### Fixed
+
 * Test for visit behavior updated [Phil Baker]
 * Removed concurrency prevention in favor of a note in the README - due to load order issues
 
 # Version 2.4.3
+
 Relase date: 2014-09-21
 
 ### Fixed
+
 * Update concurrency prevention to match Rails 4.2 behavior
 
 # Version 2.4.2
+
 Release date: 2014-09-20
 
 ### Fixed
+
 * Prevent concurrency issue when testing Rails app with default test environment [Thomas Walpole]
 * Tags for windows API tests fixed [Dmitry Vorotilin]
 * Documentation Fixes [Andrey Botalov]
@@ -159,6 +1230,7 @@ Release date: 2014-07-03
 Release date: 2014-06-02
 
 ### Added
+
 * New window management API [Andrey Botalov]
 * Speed improvement for visible text detection in RackTest [Thomas Walpole]
   Thanks to Phillipe Creux for instigating this
@@ -578,8 +1650,8 @@ Release date: 2011-06-14
 * Rack::Test driver honours maxlength on input fields [Guilherme Carvalho]
 * Rack::Test now works as expected with domains and subdomains [Jonas Nicklas]
 * Session is reset more thoroughly between tests. [Jonas Nicklas]
-* Raise error when uploading non-existant file [Jonas Nicklas]
-* Rack reponse body should respond to #each [Piotr Sarnacki]
+* Raise error when uploading non-existent file [Jonas Nicklas]
+* Rack response body should respond to #each [Piotr Sarnacki]
 * Deprecation warnings with selenium webdriver 0.2.0 [Aaron Gibraltar]
 * Selenium Chrome no longer YELLS tagname [Carl Jackson & David W. Frank]
 * Capybara no longer strips encoding before sending to Rack [Jonas Nicklas]
@@ -721,7 +1793,7 @@ Release date: 2010-05-12
 
 Release date: 2010-04-09
 
-This is a drop in compatible maintainance release. It's mostly
+This is a drop in compatible maintenance release. It's mostly
 important for driver authors.
 
 ### Added
@@ -740,7 +1812,7 @@ important for driver authors.
 
 Release date: 2010-03-22
 
-This is a maintainance release with minor bug fixes, should be
+This is a maintenance release with minor bug fixes, should be
 drop in compatible.
 
 ### Added
